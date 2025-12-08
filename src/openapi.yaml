@@ -1,0 +1,1212 @@
+openapi: 3.0.3
+info:
+  title: Sonic Cartographer API
+  description: |
+    API for Sonic Cartographer - A music discovery application that creates personalized 
+    listening portraits and guides users through conversations to broaden their musical exploration.
+    
+    ## Features
+    - Generate listener portraits from artist lists
+    - AI-guided conversations for music discovery
+    - Personalized album recommendations
+    - Listening experience capture and analysis
+    - Session history tracking
+    
+  version: 1.0.0
+  contact:
+    name: Sonic Cartographer API Support
+    email: api@soniccartographer.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.soniccartographer.com/v1
+    description: Production server
+  - url: https://staging-api.soniccartographer.com/v1
+    description: Staging server
+  - url: http://localhost:3000/api/v1
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Portraits
+    description: Listener portrait generation and retrieval
+  - name: Conversations
+    description: Guided discovery conversations
+  - name: Recommendations
+    description: Album recommendations
+  - name: Sessions
+    description: Listening sessions and feedback
+  - name: Users
+    description: User profile management
+
+paths:
+  # ==================== AUTHENTICATION ====================
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account with email and password
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - name
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 6
+                  example: securePassword123
+                name:
+                  type: string
+                  example: John Doe
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticate user with email and password
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  example: securePassword123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/social:
+    post:
+      tags:
+        - Authentication
+      summary: Social authentication
+      description: Authenticate user via social providers (Google only - Spotify, Apple, Discogs coming soon)
+      operationId: socialAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - provider
+                - token
+              properties:
+                provider:
+                  type: string
+                  enum: [google]
+                  example: google
+                  description: Only Google is currently supported
+                token:
+                  type: string
+                  description: OAuth token from the social provider
+                  example: ya29.a0AfH6SMBx...
+      responses:
+        '200':
+          description: Social authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Invalidate user session
+      operationId: logoutUser
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Logout successful
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user
+      description: Retrieve the authenticated user's information
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== PORTRAITS ====================
+  /portraits/parse-file:
+    post:
+      tags:
+        - Portraits
+      summary: Parse artist file
+      description: |\
+        Upload and parse artist files from Spotify JSON, Discogs CSV, or plain text.\
+        Returns a list of extracted artist names that can be used to generate a portrait.
+      operationId: parseArtistFile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Artist file (JSON, CSV, or TXT)
+                fileType:
+                  type: string
+                  enum: [spotify, discogs, csv, txt]
+                  description: Type of file being uploaded
+      responses:
+        '200':
+          description: File parsed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  artists:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - Radiohead
+                      - Bon Iver
+                      - Fleet Foxes
+                  count:
+                    type: integer
+                    example: 47
+                  source:
+                    type: string
+                    enum: [spotify, discogs, csv, txt]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /portraits:
+    post:
+      tags:
+        - Portraits
+      summary: Generate listener portrait
+      description: |
+        Generate a comprehensive listener portrait based on a list of artists.
+        The portrait includes primary genres, geographic centers, key eras, and noteworthy gaps.
+      operationId: createPortrait
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - artists
+              properties:
+                artists:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 5
+                  example:
+                    - Radiohead
+                    - Bon Iver
+                    - Fleet Foxes
+                    - Arcade Fire
+                    - The National
+                source:
+                  type: string
+                  enum: [manual, spotify, discogs, csv]
+                  description: Source of the artist list
+                  default: manual
+      responses:
+        '201':
+          description: Portrait generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Portrait'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    get:
+      tags:
+        - Portraits
+      summary: List user portraits
+      description: Get all portraits created by the authenticated user
+      operationId: listPortraits
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: List of portraits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Portrait'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /portraits/{portraitId}:
+    get:
+      tags:
+        - Portraits
+      summary: Get portrait by ID
+      description: Retrieve a specific listener portrait
+      operationId: getPortrait
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: portraitId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Portrait retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Portrait'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== CONVERSATIONS ====================
+  /conversations:
+    post:
+      tags:
+        - Conversations
+      summary: Start a new conversation
+      description: |
+        Initiate a guided discovery conversation based on a listener portrait.
+        The conversation helps refine musical preferences for better recommendations.
+      operationId: createConversation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - portraitId
+              properties:
+                portraitId:
+                  type: string
+                  format: uuid
+                  description: ID of the listener portrait
+                direction:
+                  type: string
+                  enum: [reinforced, pivot]
+                  description: Strategic direction (for follow-up rounds)
+                previousAnalysis:
+                  type: object
+                  description: Analysis from previous listening session
+                  properties:
+                    reinforcedThemes:
+                      type: string
+                    strategicPivot:
+                      type: string
+      responses:
+        '201':
+          description: Conversation started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /conversations/{conversationId}:
+    get:
+      tags:
+        - Conversations
+      summary: Get conversation
+      description: Retrieve a conversation with its full message history
+      operationId: getConversation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Conversation retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /conversations/{conversationId}/messages:
+    post:
+      tags:
+        - Conversations
+      summary: Add message to conversation
+      description: |
+        Send a user response in the conversation. The system will respond with
+        either a follow-up question or recommendations when the conversation is complete.
+      operationId: addMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  description: User's message content
+                  example: I'm more interested in the lyrical storytelling aspect
+      responses:
+        '200':
+          description: Message added and response generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    $ref: '#/components/schemas/Message'
+                  response:
+                    $ref: '#/components/schemas/Message'
+                  isComplete:
+                    type: boolean
+                    description: Whether the conversation is complete
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Recommendation'
+                    description: Generated recommendations (if conversation is complete)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== RECOMMENDATIONS ====================
+  /recommendations:
+    post:
+      tags:
+        - Recommendations
+      summary: Generate recommendations
+      description: |
+        Generate album recommendations based on a completed conversation.
+        Returns 5 carefully curated album recommendations.
+      operationId: createRecommendations
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - conversationId
+              properties:
+                conversationId:
+                  type: string
+                  format: uuid
+                count:
+                  type: integer
+                  default: 5
+                  minimum: 1
+                  maximum: 10
+      responses:
+        '201':
+          description: Recommendations generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  conversationId:
+                    type: string
+                    format: uuid
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Recommendation'
+                  createdAt:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /recommendations/{recommendationSetId}:
+    get:
+      tags:
+        - Recommendations
+      summary: Get recommendation set
+      description: Retrieve a specific set of recommendations
+      operationId: getRecommendations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: recommendationSetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Recommendations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  conversationId:
+                    type: string
+                    format: uuid
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Recommendation'
+                  createdAt:
+                    type: string
+                    format: date-time
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== SESSIONS ====================
+  /sessions:
+    post:
+      tags:
+        - Sessions
+      summary: Create listening session
+      description: |
+        Create a new listening session to track user's engagement with recommendations.
+      operationId: createSession
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - portraitId
+                - recommendationSetId
+              properties:
+                portraitId:
+                  type: string
+                  format: uuid
+                recommendationSetId:
+                  type: string
+                  format: uuid
+                conversationId:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    get:
+      tags:
+        - Sessions
+      summary: List user sessions
+      description: Get all listening sessions for the authenticated user
+      operationId: listSessions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /sessions/{sessionId}:
+    get:
+      tags:
+        - Sessions
+      summary: Get session by ID
+      description: Retrieve a specific listening session
+      operationId: getSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /sessions/{sessionId}/feedback:
+    post:
+      tags:
+        - Sessions
+      summary: Submit album feedback
+      description: |
+        Submit feedback for one or more albums in a listening session.
+        Includes ratings, rationale, and resonant elements.
+      operationId: submitFeedback
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - feedback
+              properties:
+                feedback:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/AlbumFeedback'
+      responses:
+        '200':
+          description: Feedback submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /sessions/{sessionId}/analysis:
+    get:
+      tags:
+        - Sessions
+      summary: Get listening analysis
+      description: |
+        Analyze the user's feedback to generate reinforced themes and strategic pivot options.
+        Requires at least 3 album reviews for meaningful analysis.
+      operationId: getSessionAnalysis
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Analysis generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListeningAnalysis'
+        '400':
+          description: Insufficient feedback data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== USERS ====================
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Get current user profile
+      description: Retrieve the authenticated user's profile information
+      operationId: getUserProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags:
+        - Users
+      summary: Update user profile
+      description: Update the authenticated user's profile information
+      operationId: updateUserProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: John Doe
+                email:
+                  type: string
+                  format: email
+                  example: newemail@example.com
+                preferences:
+                  type: object
+                  properties:
+                    notifications:
+                      type: boolean
+                    emailUpdates:
+                      type: boolean
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+# ==================== COMPONENTS ====================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from authentication endpoints
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        preferences:
+          type: object
+          properties:
+            notifications:
+              type: boolean
+            emailUpdates:
+              type: boolean
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: JWT authentication token
+        expiresAt:
+          type: string
+          format: date-time
+
+    Portrait:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        primaryGenres:
+          type: array
+          items:
+            type: string
+          example:
+            - Alternative Rock
+            - Indie Folk
+            - Dream Pop
+        geographicCenters:
+          type: array
+          items:
+            type: string
+          example:
+            - North America (US, Canada)
+            - United Kingdom
+        keyEras:
+          type: array
+          items:
+            type: string
+          example:
+            - 2000s
+            - 2010s
+        noteworthyGaps:
+          type: array
+          items:
+            type: string
+          example:
+            - Hip-Hop and R&B
+            - Latin American music
+            - Jazz and Blues
+            - Electronic music beyond indie crossover
+        artists:
+          type: array
+          items:
+            type: string
+          description: Original artist list used to generate the portrait
+        source:
+          type: string
+          enum: [manual, spotify, discogs, csv]
+        createdAt:
+          type: string
+          format: date-time
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        portraitId:
+          type: string
+          format: uuid
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        status:
+          type: string
+          enum: [active, completed]
+        direction:
+          type: string
+          enum: [reinforced, pivot]
+          description: Strategic direction (for follow-up rounds)
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Recommendation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: To Pimp a Butterfly
+        artist:
+          type: string
+          example: Kendrick Lamar
+        year:
+          type: string
+          example: "2015"
+        reason:
+          type: string
+          description: Explanation of why this album was recommended
+          example: A masterpiece of conscious Hip-Hop with jazz fusion elements and deeply introspective storytelling
+        reviewLink:
+          type: string
+          format: uri
+          example: https://pitchfork.com/reviews/albums/20390-to-pimp-a-butterfly/
+        coverImage:
+          type: string
+          format: uri
+          description: URL to album cover image
+        genres:
+          type: array
+          items:
+            type: string
+        spotifyId:
+          type: string
+          description: Spotify album ID (if available)
+        appleMusicId:
+          type: string
+          description: Apple Music album ID (if available)
+
+    AlbumFeedback:
+      type: object
+      required:
+        - albumId
+        - rating
+      properties:
+        albumId:
+          type: string
+          format: uuid
+          description: ID of the recommended album
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: User's rating (1-5 scale)
+        rationale:
+          type: string
+          description: Why the user gave this rating
+          example: Amazing production and lyrical depth, though some tracks felt too long
+        resonantElement:
+          type: string
+          description: Specific element that resonated most (or least)
+          example: The jazz instrumentation and political themes really connected with me
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        portraitId:
+          type: string
+          format: uuid
+        portrait:
+          $ref: '#/components/schemas/Portrait'
+        conversationId:
+          type: string
+          format: uuid
+        recommendationSetId:
+          type: string
+          format: uuid
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'
+        feedback:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlbumFeedback'
+        date:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [active, completed]
+
+    ListeningAnalysis:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        reinforcedThemes:
+          type: string
+          description: Analysis of themes that resonated well with the user
+          example: You strongly connected with albums featuring introspective lyricism, jazz influences, and socially conscious themes. The experimental production approaches in higher-rated albums suggest you appreciate artistic risk-taking.
+        strategicPivot:
+          type: string
+          description: Alternative strategic direction based on feedback
+          example: While you appreciated the lyrical depth, the lower ratings for more abstract experimental work suggest exploring more accessible entry points. Consider neo-soul or conscious R&B that maintains lyrical substance with more conventional structures.
+        topRatedAlbums:
+          type: array
+          items:
+            type: object
+            properties:
+              albumId:
+                type: string
+                format: uuid
+              title:
+                type: string
+              artist:
+                type: string
+              rating:
+                type: integer
+        averageRating:
+          type: number
+          format: float
+        feedbackCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: Invalid request parameters
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+
+  responses:
+    BadRequest:
+      description: Bad request - Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Invalid request parameters
+              details:
+                - field: artists
+                  message: Must provide at least 5 artists
+
+    Unauthorized:
+      description: Unauthorized - Invalid or missing authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or expired authentication token
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: Resource not found
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+
+security:
+  - bearerAuth: []
