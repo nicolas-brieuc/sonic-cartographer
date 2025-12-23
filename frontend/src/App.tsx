@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import { Auth } from './components/Auth';
-import { UserMenu } from './components/UserMenu';
+import { useState, useEffect } from 'react';
 import { LandingPage } from './components/LandingPage';
+import { Auth } from './components/Auth';
 import { ArtistInput } from './components/ArtistInput';
 import { ListenerPortrait } from './components/ListenerPortrait';
 import { ConversationInterface } from './components/ConversationInterface';
 import { RecommendationsDisplay } from './components/RecommendationsDisplay';
 import { ListeningExperience } from './components/ListeningExperience';
 import { SessionHistory } from './components/SessionHistory';
+import { UserMenu } from './components/UserMenu';
+
+type AppStep = 'landing' | 'auth' | 'artist-input' | 'portrait' | 'conversation' | 'recommendations' | 'listening-experience' | 'session-history';
 
 export type Portrait = {
   primaryGenres: string[];
@@ -34,15 +36,6 @@ export type Session = {
   feedback?: any[];
 };
 
-export type AppStep = 
-  | 'landing'
-  | 'artist-input'
-  | 'portrait'
-  | 'conversation'
-  | 'recommendations'
-  | 'listening-experience'
-  | 'history';
-
 export default function App() {
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   const [currentStep, setCurrentStep] = useState<AppStep>('landing');
@@ -57,8 +50,57 @@ export default function App() {
     analysis: { reinforcedThemes?: string; strategicPivot?: string };
   } | null>(null);
 
+  // TEMPORARY: Simulate returning user with active recommendations for testing
+  // Remove this useEffect after testing
+  useEffect(() => {
+    setUser({ name: 'Test User', email: 'test@example.com' });
+    setRecommendations([
+      {
+        id: '1',
+        title: 'To Pimp a Butterfly',
+        artist: 'Kendrick Lamar',
+        year: '2015',
+        reason: 'A perfect bridge into conscious Hip-Hop with jazz influences',
+        coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300'
+      },
+      {
+        id: '2',
+        title: 'Cosmogramma',
+        artist: 'Flying Lotus',
+        year: '2010',
+        reason: 'Electronic beats meeting jazz fusion - experimental yet accessible',
+        coverImage: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=300'
+      },
+      {
+        id: '3',
+        title: 'Vespertine',
+        artist: 'Björk',
+        year: '2001',
+        reason: 'Intimate electronic exploration with unconventional production',
+        coverImage: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300'
+      },
+      {
+        id: '4',
+        title: 'In Rainbows',
+        artist: 'Radiohead',
+        year: '2007',
+        reason: 'Experimental rock meeting electronic textures',
+        coverImage: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=300'
+      },
+      {
+        id: '5',
+        title: 'Madvillainy',
+        artist: 'Madvillain',
+        year: '2004',
+        reason: 'Abstract hip-hop with jazz-influenced production',
+        coverImage: 'https://images.unsplash.com/photo-1619983081563-430f63602796?w=300'
+      }
+    ]);
+  }, []);
+
   const handleAuthSuccess = (userData: { name: string; email: string }) => {
     setUser(userData);
+    setCurrentStep('artist-input');
   };
 
   const handleLogout = () => {
@@ -72,10 +114,24 @@ export default function App() {
     setExplorationContext(null);
   };
 
-  // Show auth screen if not logged in
-  if (!user) {
-    return <Auth onAuthSuccess={handleAuthSuccess} />;
-  }
+  const handleStartJourney = () => {
+    if (!user) {
+      setCurrentStep('auth');
+    } else {
+      // Clear any existing session data and start fresh
+      setArtistList('');
+      setPortrait(null);
+      setConversationHistory([]);
+      setRecommendations([]);
+      setCurrentSessionId(null);
+      setExplorationContext(null);
+      setCurrentStep('artist-input');
+    }
+  };
+
+  const handleCaptureFromLanding = () => {
+    setCurrentStep('listening-experience');
+  };
 
   const handleStart = () => {
     setCurrentStep('artist-input');
@@ -154,7 +210,7 @@ export default function App() {
   };
 
   const handleViewHistory = () => {
-    setCurrentStep('history');
+    setCurrentStep('session-history');
   };
 
   const handleBackToRecommendations = () => {
@@ -191,10 +247,21 @@ export default function App() {
     ]);
   };
 
+  const handleGetNewRecommendations = () => {
+    // Reset conversation and start a new one to get fresh recommendations
+    setCurrentStep('conversation');
+    setConversationHistory([
+      {
+        role: 'assistant',
+        content: 'Let\'s explore some new recommendations based on your musical portrait. What aspect of your gaps or unexplored territories interests you most right now?'
+      }
+    ]);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       {/* User Menu - Always visible when logged in */}
-      {currentStep !== 'landing' && (
+      {currentStep !== 'landing' && user && (
         <div className="fixed top-4 right-4 z-50">
           <UserMenu 
             user={user} 
@@ -204,8 +271,27 @@ export default function App() {
         </div>
       )}
 
+      {/* User Menu on landing page when user is logged in */}
+      {currentStep === 'landing' && user && (
+        <div className="fixed top-4 right-4 z-50">
+          <UserMenu 
+            user={user} 
+            onLogout={handleLogout}
+          />
+        </div>
+      )}
+
       {currentStep === 'landing' && (
-        <LandingPage onStart={handleStart} />
+        <LandingPage 
+          onStart={handleStartJourney} 
+          onCaptureExperience={handleCaptureFromLanding}
+          user={user}
+          hasActiveRecommendations={recommendations.length > 0}
+        />
+      )}
+      
+      {currentStep === 'auth' && (
+        <Auth onAuthSuccess={handleAuthSuccess} />
       )}
       
       {currentStep === 'artist-input' && (
@@ -237,6 +323,7 @@ export default function App() {
           onViewHistory={handleViewHistory}
           onStartNew={handleStartNewSession}
           onStartNewRound={handleStartNewRound}
+          onGetNewRecommendations={handleGetNewRecommendations}
         />
       )}
       
@@ -251,7 +338,7 @@ export default function App() {
         />
       )}
       
-      {currentStep === 'history' && (
+      {currentStep === 'session-history' && (
         <SessionHistory
           sessions={sessions}
           onBack={handleBackToRecommendations}

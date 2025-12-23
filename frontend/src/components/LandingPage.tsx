@@ -2,9 +2,17 @@ import { Music, MapPin, TrendingUp, MessageCircle, Headphones, Compass } from 'l
 
 interface LandingPageProps {
   onStart: () => void;
+  onCaptureExperience?: () => void;
+  user?: { name: string; email: string } | null;
+  hasActiveRecommendations?: boolean;
 }
 
-export function LandingPage({ onStart }: LandingPageProps) {
+export function LandingPage({ onStart, onCaptureExperience, user, hasActiveRecommendations }: LandingPageProps) {
+  const showBothButtons = user && hasActiveRecommendations;
+  
+  // For debugging - log the state
+  console.log('LandingPage Debug:', { user: !!user, hasActiveRecommendations, showBothButtons });
+  
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-[#1a1a1a] relative overflow-hidden">
       {/* Background image with heavy overlay */}
@@ -28,10 +36,16 @@ export function LandingPage({ onStart }: LandingPageProps) {
           <h1 className="text-6xl font-bold text-white uppercase tracking-tight border-b-4 border-[#ff0055] inline-block pb-2">
             Sonic Cartographer
           </h1>
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-            Map your musical territory. Discover what you're missing. 
-            Navigate beyond the algorithm.
-          </p>
+          {showBothButtons ? (
+            <p className="text-xl text-[#ff0055] max-w-2xl mx-auto uppercase tracking-wide">
+              Welcome back! Ready to capture your listening experience or explore new territory?
+            </p>
+          ) : (
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+              Map your musical territory. Discover what you're missing. 
+              Navigate beyond the algorithm.
+            </p>
+          )}
         </div>
 
         {/* Features Grid */}
@@ -133,12 +147,39 @@ export function LandingPage({ onStart }: LandingPageProps) {
         </div>
 
         {/* CTA Button */}
-        <button
-          onClick={onStart}
-          className="bg-[#ff0055] text-white px-12 py-4 uppercase tracking-wider hover:bg-white hover:text-black transition-all border-2 border-[#ff0055] mt-12"
-        >
-          Begin Your Musical Journey
-        </button>
+        {showBothButtons ? (
+          <div className="flex flex-col md:flex-row gap-4 mt-12 justify-center">
+            <button
+              onClick={onCaptureExperience}
+              className="bg-[#ff0055] text-white px-12 py-4 uppercase tracking-wider hover:bg-white hover:text-black transition-all border-2 border-[#ff0055]"
+            >
+              Capture Listening Experience
+            </button>
+            <button
+              onClick={onStart}
+              className="bg-white text-black px-12 py-4 uppercase tracking-wider hover:bg-[#ff0055] hover:text-white transition-all border-2 border-white"
+            >
+              Begin New Journey
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={onStart}
+            className="bg-[#ff0055] text-white px-12 py-4 uppercase tracking-wider hover:bg-white hover:text-black transition-all border-2 border-[#ff0055] mt-12"
+          >
+            Begin Your Musical Journey
+          </button>
+        )}
+
+        {/* Debug info for development */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-8 p-4 bg-gray-800 border border-gray-600 text-left text-xs text-gray-300">
+            <div><strong>Debug Info:</strong></div>
+            <div>User logged in: {user ? 'Yes' : 'No'}</div>
+            <div>Has active recommendations: {hasActiveRecommendations ? 'Yes' : 'No'}</div>
+            <div>Showing both buttons: {showBothButtons ? 'Yes' : 'No'}</div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,911 @@
+openapi: 3.0.3
+info:
+  title: Sonic Cartographer API
+  description: |
+    API for the Sonic Cartographer music discovery application. 
+    Creates personalized listening portraits based on users' music history and guides them 
+    through conversations to broaden their musical exploration.
+  version: 1.0.0
+  contact:
+    name: Sonic Cartographer
+    email: api@soniccartographer.com
+
+servers:
+  - url: https://api.soniccartographer.com/v1
+    description: Production server
+  - url: https://staging-api.soniccartographer.com/v1
+    description: Staging server
+  - url: http://localhost:3000/v1
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication and account management
+  - name: Portraits
+    description: Listener portrait generation and analysis
+  - name: Conversations
+    description: Guided conversation for music exploration
+  - name: Recommendations
+    description: Album recommendations and delivery
+  - name: Listening Experiences
+    description: Capture and manage listening feedback
+  - name: Sessions
+    description: Session history and management
+
+paths:
+  # ===========================
+  # Authentication Endpoints
+  # ===========================
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+              properties:
+                name:
+                  type: string
+                  example: John Doe
+                email:
+                  type: string
+                  format: email
+                  example: john@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: SecurePass123!
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+                    description: JWT authentication token
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticate user and return JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: john@example.com
+                password:
+                  type: string
+                  format: password
+                  example: SecurePass123!
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+                    description: JWT authentication token
+                  hasActiveRecommendations:
+                    type: boolean
+                    description: Whether user has active recommendations
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Invalidate user session
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logout successful
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user
+      description: Retrieve authenticated user's profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  hasActiveRecommendations:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ===========================
+  # Portrait Endpoints
+  # ===========================
+  /portraits/generate:
+    post:
+      tags:
+        - Portraits
+      summary: Generate listener portrait
+      description: |
+        Analyzes user's artist list and generates a comprehensive listener portrait 
+        including genres, geographic centers, key eras, and noteworthy gaps
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - artists
+              properties:
+                artists:
+                  type: string
+                  description: Comma-separated or newline-separated list of artists
+                  example: "Radiohead, Bon Iver, Fleet Foxes, The National, Grizzly Bear"
+      responses:
+        '200':
+          description: Portrait generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  portrait:
+                    $ref: '#/components/schemas/Portrait'
+                  sessionId:
+                    type: string
+                    description: ID of the created session
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ===========================
+  # Conversation Endpoints
+  # ===========================
+  /conversations:
+    post:
+      tags:
+        - Conversations
+      summary: Start a new conversation
+      description: Initialize a guided conversation based on user's portrait
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sessionId
+                - portraitId
+              properties:
+                sessionId:
+                  type: string
+                  description: Session ID from portrait generation
+                portraitId:
+                  type: string
+                  description: Portrait ID to base conversation on
+                direction:
+                  type: string
+                  enum: [reinforced, pivot, initial]
+                  default: initial
+                  description: Conversation direction (for subsequent rounds)
+                analysis:
+                  type: object
+                  properties:
+                    reinforcedThemes:
+                      type: string
+                    strategicPivot:
+                      type: string
+      responses:
+        '201':
+          description: Conversation started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversationId:
+                    type: string
+                  initialMessage:
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        enum: [assistant]
+                      content:
+                        type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /conversations/{conversationId}/messages:
+    post:
+      tags:
+        - Conversations
+      summary: Send a message in conversation
+      description: Send user response and receive AI guidance
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  description: User's message/response
+                  example: "I'm interested in conscious rap with live instrumentation"
+      responses:
+        '200':
+          description: Message processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        enum: [assistant]
+                      content:
+                        type: string
+                  conversationComplete:
+                    type: boolean
+                    description: Whether conversation has gathered enough information
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /conversations/{conversationId}/recommendations:
+    post:
+      tags:
+        - Conversations
+      summary: Generate recommendations from conversation
+      description: Generate 5 album recommendations based on completed conversation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recommendations generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Recommendation'
+                    minItems: 5
+                    maxItems: 5
+        '400':
+          description: Conversation not complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===========================
+  # Recommendation Endpoints
+  # ===========================
+  /recommendations/active:
+    get:
+      tags:
+        - Recommendations
+      summary: Get active recommendations
+      description: Retrieve user's current active recommendations (only one set at a time)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active recommendations retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Recommendation'
+                  sessionId:
+                    type: string
+                    description: Session these recommendations belong to
+        '404':
+          description: No active recommendations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /recommendations/spotify-playlist:
+    post:
+      tags:
+        - Recommendations
+      summary: Create Spotify playlist
+      description: |
+        Create a Spotify playlist from current recommendations.
+        Requires user to have connected their Spotify account.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                playlistName:
+                  type: string
+                  default: "Sonic Cartographer Recommendations"
+                  example: "My Musical Journey"
+                public:
+                  type: boolean
+                  default: false
+                  description: Whether playlist should be public
+      responses:
+        '201':
+          description: Playlist created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  playlistUrl:
+                    type: string
+                    format: uri
+                    example: "https://open.spotify.com/playlist/abc123"
+                  playlistId:
+                    type: string
+                    example: "abc123xyz"
+        '400':
+          description: No active recommendations or Spotify not connected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Spotify API unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /recommendations/email:
+    post:
+      tags:
+        - Recommendations
+      summary: Email recommendations
+      description: Send current recommendations to user's email
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Email address (defaults to user's registered email)
+                  example: john@example.com
+      responses:
+        '200':
+          description: Email sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Recommendations sent to john@example.com"
+        '400':
+          description: No active recommendations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ===========================
+  # Listening Experience Endpoints
+  # ===========================
+  /listening-experiences:
+    post:
+      tags:
+        - Listening Experiences
+      summary: Capture listening experience
+      description: |
+        Submit structured feedback on recommendations. 
+        This completes the current recommendation cycle and archives them.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sessionId
+                - feedback
+              properties:
+                sessionId:
+                  type: string
+                  description: Session ID for the recommendations
+                feedback:
+                  type: array
+                  description: Array of feedback for each recommendation
+                  items:
+                    type: object
+                    required:
+                      - recommendationId
+                      - rating
+                    properties:
+                      recommendationId:
+                        type: string
+                      listened:
+                        type: boolean
+                        description: Whether user listened to the album
+                      rating:
+                        type: integer
+                        minimum: 1
+                        maximum: 5
+                        description: 1-5 star rating
+                      whatResonated:
+                        type: string
+                        description: What aspects resonated with the user
+                      whatDidnt:
+                        type: string
+                        description: What aspects didn't work
+                      willRevisit:
+                        type: boolean
+                        description: Whether user plans to revisit
+                      notes:
+                        type: string
+                        description: Additional notes
+      responses:
+        '201':
+          description: Listening experience captured
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  experienceId:
+                    type: string
+                  message:
+                    type: string
+                    example: "Feedback captured successfully"
+                  nextSteps:
+                    type: object
+                    properties:
+                      canRequestNew:
+                        type: boolean
+                        example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    get:
+      tags:
+        - Listening Experiences
+      summary: Get listening experiences
+      description: Retrieve user's listening experience history
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Listening experiences retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  experiences:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ListeningExperience'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ===========================
+  # Session Endpoints
+  # ===========================
+  /sessions:
+    get:
+      tags:
+        - Sessions
+      summary: Get session history
+      description: Retrieve user's session history
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Sessions retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /sessions/{sessionId}:
+    get:
+      tags:
+        - Sessions
+      summary: Get session details
+      description: Retrieve detailed information about a specific session
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+# ===========================
+# Components
+# ===========================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login or registration
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: user_abc123
+        name:
+          type: string
+          example: John Doe
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        createdAt:
+          type: string
+          format: date-time
+        spotifyConnected:
+          type: boolean
+          description: Whether user has connected Spotify account
+
+    Portrait:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        primaryGenres:
+          type: array
+          items:
+            type: string
+          example:
+            - Alternative Rock
+            - Indie Folk
+            - Dream Pop
+        geographicCenters:
+          type: array
+          items:
+            type: string
+          example:
+            - "United States (Brooklyn, Portland)"
+            - "United Kingdom (London, Manchester)"
+        keyEras:
+          type: array
+          items:
+            type: string
+          example:
+            - "2000-2010"
+            - "2010-2020"
+        noteworthyGaps:
+          type: array
+          items:
+            type: string
+          example:
+            - "Hip-Hop/R&B - Minimal representation"
+            - "Latin American Music - No artists from South/Central America"
+        createdAt:
+          type: string
+          format: date-time
+
+    Recommendation:
+      type: object
+      properties:
+        id:
+          type: string
+          example: rec_abc123
+        title:
+          type: string
+          example: "To Pimp a Butterfly"
+        artist:
+          type: string
+          example: "Kendrick Lamar"
+        year:
+          type: string
+          example: "2015"
+        reason:
+          type: string
+          example: "A perfect bridge into conscious Hip-Hop with jazz influences"
+        reviewLink:
+          type: string
+          format: uri
+          example: "https://pitchfork.com/reviews/albums/..."
+        coverImage:
+          type: string
+          format: uri
+          example: "https://images.example.com/album-cover.jpg"
+        spotifyUri:
+          type: string
+          example: "spotify:album:7ycBtnsMtyVbbwTfJwRjSP"
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        date:
+          type: string
+          format: date-time
+        portrait:
+          $ref: '#/components/schemas/Portrait'
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'
+        listeningExperience:
+          $ref: '#/components/schemas/ListeningExperience'
+        status:
+          type: string
+          enum: [active, completed, archived]
+          description: |
+            - active: Has recommendations but no feedback yet
+            - completed: Has both recommendations and feedback
+            - archived: Old session
+
+    ListeningExperience:
+      type: object
+      properties:
+        id:
+          type: string
+        sessionId:
+          type: string
+        userId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        feedback:
+          type: array
+          items:
+            type: object
+            properties:
+              recommendationId:
+                type: string
+              albumTitle:
+                type: string
+              artist:
+                type: string
+              listened:
+                type: boolean
+              rating:
+                type: integer
+                minimum: 1
+                maximum: 5
+              whatResonated:
+                type: string
+              whatDidnt:
+                type: string
+              willRevisit:
+                type: boolean
+              notes:
+                type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: Invalid input provided
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+
+  responses:
+    BadRequest:
+      description: Bad request - Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized - Invalid or missing authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Authentication required
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: Resource not found
