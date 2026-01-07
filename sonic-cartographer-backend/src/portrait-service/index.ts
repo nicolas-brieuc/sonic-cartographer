@@ -17,6 +17,7 @@ interface Portrait {
   geographicCenters?: string[];
   keyEras?: string[];
   noteworthyGaps?: string[];
+  summary?: string;
 }
 
 export default class extends Service<Env> {
@@ -53,10 +54,13 @@ IMPORTANT: Return your response as a valid JSON object with this exact structure
   "primaryGenres": ["genre1", "genre2", ...],
   "geographicCenters": ["location1", "location2", ...],
   "keyEras": ["era1", "era2", ...],
-  "noteworthyGaps": ["gap1 - description", "gap2 - description", ...]
+  "noteworthyGaps": ["gap1 - description", "gap2 - description", ...],
+  "summary": "A 2-3 sentence personalized summary synthesizing the portrait findings and highlighting opportunities for exploration"
 }
 
-Be specific and insightful. For gaps, include explanations after a dash (e.g., "Latin American Music - No artists from South/Central America despite global dominance").`;
+Be specific and insightful. For gaps, include explanations after a dash (e.g., "Latin American Music - No artists from South/Central America despite global dominance").
+
+The summary should be conversational and encouraging, mentioning specific genres/regions from the portrait data and exciting opportunities ahead.`;
 
     try {
       const analysis = await this.env.AI.run('llama-3.3-70b', {
@@ -98,6 +102,7 @@ Be specific and insightful. For gaps, include explanations after a dash (e.g., "
         geographicCenters: portraitData.geographicCenters || [],
         keyEras: portraitData.keyEras || [],
         noteworthyGaps: portraitData.noteworthyGaps || [],
+        summary: portraitData.summary || undefined,
       };
     } catch (error) {
       this.env.logger.error('Failed to analyze portrait with AI', {

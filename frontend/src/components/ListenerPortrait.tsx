@@ -106,16 +106,14 @@ export function ListenerPortrait({ portrait, onStartConversation }: ListenerPort
         </div>
 
         {/* Analysis Summary */}
-        <div className="bg-[#202020] border-4 border-[#ff0055] p-8">
-          <h2 className="mb-4 text-white uppercase tracking-wider border-b-2 border-white pb-3">What This Tells Us</h2>
-          <p className="text-gray-300 leading-relaxed">
-            Your listening habits show a strong preference for alternative and indie music 
-            from the 2000s-2010s era, primarily from North American and UK artists. 
-            However, there are exciting opportunities to explore genres like Hip-Hop, 
-            Latin music, and Jazz, as well as discover artists from underrepresented regions. 
-            Let&apos;s have a conversation to find the perfect direction for your musical journey.
-          </p>
-        </div>
+        {portrait.summary && (
+          <div className="bg-[#202020] border-4 border-[#ff0055] p-8">
+            <h2 className="mb-4 text-white uppercase tracking-wider border-b-2 border-white pb-3">What This Tells Us</h2>
+            <p className="text-gray-300 leading-relaxed">
+              {portrait.summary}
+            </p>
+          </div>
+        )}
 
         {/* CTA */}
         <div className="flex justify-center pt-4">

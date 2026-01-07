@@ -17,6 +17,7 @@ export type Portrait = {
   geographicCenters: string[];
   keyEras: string[];
   noteworthyGaps: string[];
+  summary?: string;
 };
 
 export type Recommendation = {
@@ -124,6 +125,7 @@ export default function App() {
         geographicCenters: data.geographicCenters || [],
         keyEras: data.keyEras || data.eras || [],
         noteworthyGaps: data.noteworthyGaps || [],
+        summary: data.summary,
       };
 
       console.log('Generated portrait:', generatedPortrait);

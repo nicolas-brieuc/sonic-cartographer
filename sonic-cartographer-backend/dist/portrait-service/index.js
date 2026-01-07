@@ -1,4 +1,4 @@
-globalThis.__RAINDROP_GIT_COMMIT_SHA = "553e074779576ae109b2a602de1d36d49d114d75"; 
+globalThis.__RAINDROP_GIT_COMMIT_SHA = "5d83e3cb6fe8e5357ae569bd34837ff4360a4f43"; 
 
 // node_modules/@liquidmetal-ai/raindrop-framework/dist/core/cors.js
 var matchOrigin = (request, env, config) => {
@@ -119,10 +119,13 @@ IMPORTANT: Return your response as a valid JSON object with this exact structure
   "primaryGenres": ["genre1", "genre2", ...],
   "geographicCenters": ["location1", "location2", ...],
   "keyEras": ["era1", "era2", ...],
-  "noteworthyGaps": ["gap1 - description", "gap2 - description", ...]
+  "noteworthyGaps": ["gap1 - description", "gap2 - description", ...],
+  "summary": "A 2-3 sentence personalized summary synthesizing the portrait findings and highlighting opportunities for exploration"
 }
 
-Be specific and insightful. For gaps, include explanations after a dash (e.g., "Latin American Music - No artists from South/Central America despite global dominance").`;
+Be specific and insightful. For gaps, include explanations after a dash (e.g., "Latin American Music - No artists from South/Central America despite global dominance").
+
+The summary should be conversational and encouraging, mentioning specific genres/regions from the portrait data and exciting opportunities ahead.`;
     try {
       const analysis = await this.env.AI.run("llama-3.3-70b", {
         messages: [
@@ -154,7 +157,8 @@ Be specific and insightful. For gaps, include explanations after a dash (e.g., "
         primaryGenres: portraitData.primaryGenres || [],
         geographicCenters: portraitData.geographicCenters || [],
         keyEras: portraitData.keyEras || [],
-        noteworthyGaps: portraitData.noteworthyGaps || []
+        noteworthyGaps: portraitData.noteworthyGaps || [],
+        summary: portraitData.summary || void 0
       };
     } catch (error) {
       this.env.logger.error("Failed to analyze portrait with AI", {
