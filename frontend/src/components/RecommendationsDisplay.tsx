@@ -1,6 +1,7 @@
 import { ArrowRight, ExternalLink, CheckCircle2, History, Plus, RefreshCw, Music, Mail, X } from 'lucide-react';
 import { Recommendation } from '../App';
 import { useState } from 'react';
+import { API_ENDPOINTS, getAuthHeaders } from '../config/api';
 
 interface RecommendationsDisplayProps {
   recommendations: Recommendation[];
@@ -11,12 +12,14 @@ interface RecommendationsDisplayProps {
   onGetNewRecommendations?: () => void;
 }
 
-export function RecommendationsDisplay({ 
-  recommendations, 
+export function RecommendationsDisplay({
+  recommendations,
   onCaptureExperience,
-  onGetNewRecommendations 
+  onGetNewRecommendations
 }: RecommendationsDisplayProps) {
   const [showListeningModal, setShowListeningModal] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailMessage, setEmailMessage] = useState<string | null>(null);
 
   const handleStartListening = () => {
     setShowListeningModal(true);
@@ -28,10 +31,43 @@ export function RecommendationsDisplay({
     setShowListeningModal(false);
   };
 
-  const handleEmailRecommendations = () => {
-    // In a real app, this would send an email with the recommendations
-    alert('Email feature coming soon! This would email you the recommendations.');
-    setShowListeningModal(false);
+  const handleEmailRecommendations = async () => {
+    setEmailLoading(true);
+    setEmailMessage(null);
+
+    try {
+      const response = await fetch(API_ENDPOINTS.emailRecommendations, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          recommendations: recommendations.map(rec => ({
+            title: rec.title,
+            artist: rec.artist,
+            year: rec.year,
+            reason: rec.reason,
+          }))
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send email');
+      }
+
+      setEmailMessage(data.message || 'Recommendations sent to your email!');
+
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        setShowListeningModal(false);
+        setEmailMessage(null);
+      }, 2000);
+    } catch (error) {
+      console.error('Email error:', error);
+      setEmailMessage(error instanceof Error ? error.message : 'Failed to send email. Please try again.');
+    } finally {
+      setEmailLoading(false);
+    }
   };
 
   return (
@@ -163,12 +199,30 @@ export function RecommendationsDisplay({
 
                 <button
                   onClick={handleEmailRecommendations}
-                  className="w-full flex items-center justify-center gap-3 bg-white text-black px-8 py-4 uppercase tracking-wider hover:bg-[#ff0055] hover:text-white transition-all border-2 border-white"
+                  disabled={emailLoading}
+                  className="w-full flex items-center justify-center gap-3 bg-white text-black px-8 py-4 uppercase tracking-wider hover:bg-[#ff0055] hover:text-white transition-all border-2 border-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Mail className="w-5 h-5" />
-                  Email Recommendations
+                  {emailLoading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-black border-t-transparent animate-spin rounded-full" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-5 h-5" />
+                      Email Recommendations
+                    </>
+                  )}
                 </button>
               </div>
+
+              {emailMessage && (
+                <div className={`p-4 border-2 ${emailMessage.includes('Failed') || emailMessage.includes('error') ? 'border-red-500 bg-red-900/20' : 'border-green-500 bg-green-900/20'}`}>
+                  <p className={`text-sm text-center uppercase tracking-wide ${emailMessage.includes('Failed') || emailMessage.includes('error') ? 'text-red-300' : 'text-green-300'}`}>
+                    {emailMessage}
+                  </p>
+                </div>
+              )}
 
               <p className="text-xs text-gray-500 text-center uppercase tracking-wide">
                 Come back later to capture your listening experience

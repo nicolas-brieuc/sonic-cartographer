@@ -1,4 +1,4 @@
-globalThis.__RAINDROP_GIT_COMMIT_SHA = "5d83e3cb6fe8e5357ae569bd34837ff4360a4f43"; 
+globalThis.__RAINDROP_GIT_COMMIT_SHA = "76a1265a2c11c398689e9e59afade729210a3e5b"; 
 
 // node_modules/@liquidmetal-ai/raindrop-framework/dist/core/cors.js
 var matchOrigin = (request, env, config) => {
@@ -91,6 +91,59 @@ var cors = corsAllowAll;
 // src/data-enrichment-service/index.ts
 import { Service } from "./runtime.js";
 var data_enrichment_service_default = class extends Service {
+  async searchAlbums(request) {
+    this.env.logger.info("Searching albums on Discogs", {
+      genre: request.genre,
+      style: request.style,
+      country: request.country,
+      limit: request.limit
+    });
+    try {
+      const params = new URLSearchParams();
+      params.append("type", "master");
+      params.append("format", "album");
+      if (request.genre) params.append("genre", request.genre);
+      if (request.style) params.append("style", request.style);
+      if (request.year) params.append("year", request.year);
+      if (request.country) params.append("country", request.country);
+      params.append("per_page", String(request.limit || 20));
+      const url = `https://api.discogs.com/database/search?${params.toString()}`;
+      const response = await fetch(url, {
+        headers: {
+          "Authorization": `Discogs token=${this.env.DISCOGS_API_KEY}`,
+          "User-Agent": "SonicCartographer/1.0 +https://soniccartographer.com"
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`Discogs API error: ${response.status}`);
+      }
+      const data = await response.json();
+      const results = data.results || [];
+      const albums = results.filter((r) => r.type === "master" && r.title && r.year).map((r) => {
+        const parts = (r.title || "").split(" - ");
+        const artist = parts.length > 1 && parts[0] ? parts[0].trim() : "Unknown Artist";
+        const title = parts.length > 1 ? parts.slice(1).join(" - ").trim() : r.title || "Unknown Album";
+        return {
+          discogsId: r.master_id || r.id,
+          title,
+          artist,
+          year: r.year,
+          genres: r.genre || [],
+          country: r.country
+        };
+      });
+      this.env.logger.info("Found albums on Discogs", {
+        count: albums.length,
+        query: request
+      });
+      return albums;
+    } catch (error) {
+      this.env.logger.error("Failed to search Discogs", {
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+      return [];
+    }
+  }
   async fetch() {
     return new Response("Not implemented", { status: 501 });
   }

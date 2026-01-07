@@ -18,11 +18,11 @@ const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 /**
  * Extracts and validates JWT token from Authorization header
  * @param c - Hono context with environment bindings
- * @returns User object with userId if valid, null otherwise
+ * @returns User object with userId and email if valid, null otherwise
  */
 export async function validateToken(
   c: Context<{ Bindings: Env }>
-): Promise<{ userId: string } | null> {
+): Promise<{ userId: string; email: string; name?: string } | null> {
   const authHeader = c.req.header('Authorization');
 
   // Check for Bearer token format
@@ -34,7 +34,17 @@ export async function validateToken(
 
   try {
     const result = await c.env.AUTH_SERVICE.validateToken(token);
-    return result;
+    if (!result) {
+      return null;
+    }
+
+    // Return userId and email from token payload
+    // Note: name is not in the token, will need to be fetched separately if needed
+    return {
+      userId: result.userId,
+      email: result.email,
+      name: result.email.split('@')[0], // Use email prefix as fallback name
+    };
   } catch {
     return null;
   }
@@ -139,7 +149,7 @@ export async function checkRateLimit(
  * @returns Wrapped handler with authentication check
  */
 export function withAuth<T>(
-  handler: (c: Context<{ Bindings: Env }>, user: { userId: string }) => Promise<T>
+  handler: (c: Context<{ Bindings: Env }>, user: { userId: string; email: string; name?: string }) => Promise<T>
 ) {
   return async (c: Context<{ Bindings: Env }>): Promise<T | Response> => {
     const user = await validateToken(c);

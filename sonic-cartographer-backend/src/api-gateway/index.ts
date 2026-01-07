@@ -168,11 +168,35 @@ app.post('/v1/conversations/:conversationId/recommendations', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const body = await c.req.json();
+    const conversationId = c.req.param('conversationId');
     const result = await c.env.RECOMMENDATION_SERVICE.generateRecommendations(
-      body.conversationId
+      conversationId
     );
     return c.json(result, 201);
+  } catch (error) {
+    return handleJsonError(error, c);
+  }
+});
+
+app.post('/v1/recommendations/email', async (c) => {
+  try {
+    const user = await validateToken(c);
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const body = await c.req.json();
+    const result = await c.env.EMAIL_SERVICE.sendRecommendations({
+      userEmail: user.email,
+      userName: user.name || user.email,
+      recommendations: body.recommendations,
+    });
+
+    if (!result.success) {
+      return c.json({ error: result.message }, 500);
+    }
+
+    return c.json(result, 200);
   } catch (error) {
     return handleJsonError(error, c);
   }

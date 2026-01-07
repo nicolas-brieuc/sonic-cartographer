@@ -1,4 +1,4 @@
-globalThis.__RAINDROP_GIT_COMMIT_SHA = "5d83e3cb6fe8e5357ae569bd34837ff4360a4f43"; 
+globalThis.__RAINDROP_GIT_COMMIT_SHA = "76a1265a2c11c398689e9e59afade729210a3e5b"; 
 
 // node_modules/@liquidmetal-ai/raindrop-framework/dist/core/cors.js
 var matchOrigin = (request, env, config) => {
@@ -2138,7 +2138,15 @@ async function validateToken(c) {
   const token = authHeader.substring(7);
   try {
     const result = await c.env.AUTH_SERVICE.validateToken(token);
-    return result;
+    if (!result) {
+      return null;
+    }
+    return {
+      userId: result.userId,
+      email: result.email,
+      name: result.email.split("@")[0]
+      // Use email prefix as fallback name
+    };
   } catch {
     return null;
   }
@@ -2295,11 +2303,31 @@ app.post("/v1/conversations/:conversationId/recommendations", async (c) => {
     if (!user) {
       return c.json({ error: "Unauthorized" }, 401);
     }
-    const body = await c.req.json();
+    const conversationId = c.req.param("conversationId");
     const result = await c.env.RECOMMENDATION_SERVICE.generateRecommendations(
-      body.conversationId
+      conversationId
     );
     return c.json(result, 201);
+  } catch (error) {
+    return handleJsonError(error, c);
+  }
+});
+app.post("/v1/recommendations/email", async (c) => {
+  try {
+    const user = await validateToken(c);
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+    const body = await c.req.json();
+    const result = await c.env.EMAIL_SERVICE.sendRecommendations({
+      userEmail: user.email,
+      userName: user.name || user.email,
+      recommendations: body.recommendations
+    });
+    if (!result.success) {
+      return c.json({ error: result.message }, 500);
+    }
+    return c.json(result, 200);
   } catch (error) {
     return handleJsonError(error, c);
   }

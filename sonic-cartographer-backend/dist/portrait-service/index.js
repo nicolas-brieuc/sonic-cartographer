@@ -1,4 +1,4 @@
-globalThis.__RAINDROP_GIT_COMMIT_SHA = "5d83e3cb6fe8e5357ae569bd34837ff4360a4f43"; 
+globalThis.__RAINDROP_GIT_COMMIT_SHA = "76a1265a2c11c398689e9e59afade729210a3e5b"; 
 
 // node_modules/@liquidmetal-ai/raindrop-framework/dist/core/cors.js
 var matchOrigin = (request, env, config) => {
@@ -147,7 +147,7 @@ The summary should be conversational and encouraging, mentioning specific genres
         jsonText = jsonText.replace(/```\n?/g, "");
       }
       const portraitData = JSON.parse(jsonText);
-      return {
+      const portrait = {
         portraitId,
         userId: data.userId,
         // Old format for backward compatibility
@@ -160,11 +160,13 @@ The summary should be conversational and encouraging, mentioning specific genres
         noteworthyGaps: portraitData.noteworthyGaps || [],
         summary: portraitData.summary || void 0
       };
+      await this.storePortrait(portrait);
+      return portrait;
     } catch (error) {
       this.env.logger.error("Failed to analyze portrait with AI", {
         errorMessage: error instanceof Error ? error.message : "Unknown error"
       });
-      return {
+      const fallbackPortrait = {
         portraitId,
         userId: data.userId,
         genres: ["Various Genres"],
@@ -174,22 +176,133 @@ The summary should be conversational and encouraging, mentioning specific genres
         keyEras: ["Unable to analyze - AI error"],
         noteworthyGaps: ["AI analysis failed - please try again"]
       };
+      await this.storePortrait(fallbackPortrait);
+      return fallbackPortrait;
+    }
+  }
+  async storePortrait(portrait) {
+    try {
+      await this.env.MAIN_DATABASE.executeQuery({
+        sqlQuery: `
+          CREATE TABLE IF NOT EXISTS portraits (
+            portrait_id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            primary_genres TEXT,
+            geographic_centers TEXT,
+            key_eras TEXT,
+            noteworthy_gaps TEXT,
+            summary TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `
+      });
+      const insertQuery = `
+        INSERT INTO portraits (portrait_id, user_id, primary_genres, geographic_centers, key_eras, noteworthy_gaps, summary)
+        VALUES (
+          '${portrait.portraitId}',
+          '${portrait.userId || ""}',
+          '${JSON.stringify(portrait.primaryGenres || []).replace(/'/g, "''")}',
+          '${JSON.stringify(portrait.geographicCenters || []).replace(/'/g, "''")}',
+          '${JSON.stringify(portrait.keyEras || []).replace(/'/g, "''")}',
+          '${JSON.stringify(portrait.noteworthyGaps || []).replace(/'/g, "''")}',
+          ${portrait.summary ? `'${portrait.summary.replace(/'/g, "''")}'` : "NULL"}
+        )
+      `;
+      await this.env.MAIN_DATABASE.executeQuery({
+        sqlQuery: insertQuery
+      });
+      this.env.logger.info("Portrait stored successfully", { portraitId: portrait.portraitId });
+    } catch (error) {
+      this.env.logger.error("Failed to store portrait", {
+        portraitId: portrait.portraitId,
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+      throw error;
     }
   }
   async getPortrait(portraitId) {
     this.env.logger.info("Getting portrait", { portraitId });
-    return {
-      portraitId,
-      userId: "user-123",
-      genres: ["Rock"]
-    };
+    try {
+      const result = await this.env.MAIN_DATABASE.executeQuery({
+        sqlQuery: `SELECT portrait_id, user_id, primary_genres, geographic_centers, key_eras, noteworthy_gaps, summary
+                   FROM portraits
+                   WHERE portrait_id = '${portraitId}'`,
+        format: "json"
+      });
+      if (result.status !== 200 || !result.results) {
+        throw new Error("Portrait not found");
+      }
+      const rows = JSON.parse(result.results);
+      if (!rows || rows.length === 0) {
+        throw new Error("Portrait not found");
+      }
+      const row = rows[0];
+      const primaryGenres = row.primary_genres ? JSON.parse(row.primary_genres) : [];
+      const geographicCenters = row.geographic_centers ? JSON.parse(row.geographic_centers) : [];
+      const keyEras = row.key_eras ? JSON.parse(row.key_eras) : [];
+      const noteworthyGaps = row.noteworthy_gaps ? JSON.parse(row.noteworthy_gaps) : [];
+      return {
+        portraitId: row.portrait_id,
+        userId: row.user_id,
+        // Old format for backward compatibility
+        genres: primaryGenres,
+        eras: keyEras,
+        // New format
+        primaryGenres,
+        geographicCenters,
+        keyEras,
+        noteworthyGaps,
+        summary: row.summary || void 0
+      };
+    } catch (error) {
+      this.env.logger.error("Failed to get portrait", {
+        portraitId,
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+      throw error;
+    }
   }
   async listPortraits(userId) {
     this.env.logger.info("Listing portraits", { userId });
-    return [
-      { portraitId: "p1" },
-      { portraitId: "p2" }
-    ];
+    try {
+      const result = await this.env.MAIN_DATABASE.executeQuery({
+        sqlQuery: `SELECT portrait_id, user_id, primary_genres, geographic_centers, key_eras, noteworthy_gaps, summary
+                   FROM portraits
+                   WHERE user_id = '${userId}'
+                   ORDER BY created_at DESC`,
+        format: "json"
+      });
+      if (result.status !== 200 || !result.results) {
+        return [];
+      }
+      const rows = JSON.parse(result.results);
+      if (!rows || rows.length === 0) {
+        return [];
+      }
+      return rows.map((row) => {
+        const primaryGenres = row.primary_genres ? JSON.parse(row.primary_genres) : [];
+        const geographicCenters = row.geographic_centers ? JSON.parse(row.geographic_centers) : [];
+        const keyEras = row.key_eras ? JSON.parse(row.key_eras) : [];
+        const noteworthyGaps = row.noteworthy_gaps ? JSON.parse(row.noteworthy_gaps) : [];
+        return {
+          portraitId: row.portrait_id,
+          userId: row.user_id,
+          genres: primaryGenres,
+          eras: keyEras,
+          primaryGenres,
+          geographicCenters,
+          keyEras,
+          noteworthyGaps,
+          summary: row.summary || void 0
+        };
+      });
+    } catch (error) {
+      this.env.logger.error("Failed to list portraits", {
+        userId,
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+      return [];
+    }
   }
   async fetch() {
     return new Response("Not implemented", { status: 501 });

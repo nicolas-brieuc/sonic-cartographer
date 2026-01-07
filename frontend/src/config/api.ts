@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
 
   // Recommendations
   generateRecommendations: (conversationId: string) => `${API_BASE_URL}/v1/conversations/${conversationId}/recommendations`,
+  emailRecommendations: `${API_BASE_URL}/v1/recommendations/email`,
 
   // Health check
   health: `${API_BASE_URL}/health`,
