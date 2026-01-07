@@ -1,0 +1,86 @@
+application "sonic-cartographer-backend" {
+
+  // Public API Gateway
+  service "api-gateway" {
+    visibility = "public"
+  }
+
+  // Private Backend Services
+  service "auth-service" {
+    visibility = "private"
+  }
+
+  service "portrait-service" {
+    visibility = "private"
+  }
+
+  service "conversation-service" {
+    visibility = "private"
+  }
+
+  service "recommendation-service" {
+    visibility = "private"
+  }
+
+  service "listening-experience-service" {
+    visibility = "private"
+  }
+
+  service "session-service" {
+    visibility = "private"
+  }
+
+  service "spotify-integration-service" {
+    visibility = "private"
+  }
+
+  service "email-service" {
+    visibility = "private"
+  }
+
+  service "data-enrichment-service" {
+    visibility = "private"
+  }
+
+  // SmartSQL Database
+  smartsql "main-database" {}
+
+  // SmartMemory for Conversation Context
+  smartmemory "conversation-memory" {}
+
+  // SmartBuckets for Artist Lists and Album Metadata
+  smartbucket "artist-data-bucket" {}
+
+  // Environment Secrets
+  env "JWT_SECRET" {
+    secret = true
+  }
+
+  env "SPOTIFY_CLIENT_ID" {
+    secret = true
+  }
+
+  env "SPOTIFY_CLIENT_SECRET" {
+    secret = true
+  }
+
+  env "SPOTIFY_REDIRECT_URI" {
+    secret = true
+  }
+
+  env "DISCOGS_API_KEY" {
+    secret = true
+  }
+
+  env "EMAIL_API_KEY" {
+    secret = true
+  }
+
+  env "EMAIL_FROM_ADDRESS" {
+    secret = true
+  }
+
+  env "FRONTEND_URL" {
+    secret = false
+  }
+}
