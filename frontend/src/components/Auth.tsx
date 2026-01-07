@@ -47,12 +47,14 @@ export function Auth({ onAuthSuccess }: AuthProps) {
           throw new Error(data.error || 'Registration failed');
         }
 
-        // Store token and proceed
+        // Store token and user data
         setAuthToken(data.token);
-        onAuthSuccess({
+        const userData = {
           name: formData.name,
           email: formData.email,
-        });
+        };
+        localStorage.setItem('userData', JSON.stringify(userData));
+        onAuthSuccess(userData);
       } else {
         // Login existing user
         const response = await fetch(API_ENDPOINTS.login, {
@@ -70,12 +72,14 @@ export function Auth({ onAuthSuccess }: AuthProps) {
           throw new Error(data.error || 'Login failed');
         }
 
-        // Store token and proceed
+        // Store token and user data
         setAuthToken(data.token);
-        onAuthSuccess({
+        const userData = {
           name: data.user?.name || formData.email.split('@')[0],
           email: formData.email,
-        });
+        };
+        localStorage.setItem('userData', JSON.stringify(userData));
+        onAuthSuccess(userData);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed. Please try again.');

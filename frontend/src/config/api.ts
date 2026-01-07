@@ -50,6 +50,7 @@ export const setAuthToken = (token: string): void => {
  */
 export const clearAuthToken = (): void => {
   localStorage.removeItem('auth_token');
+  localStorage.removeItem('userData');
 };
 
 /**

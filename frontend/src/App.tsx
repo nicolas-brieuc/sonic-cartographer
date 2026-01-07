@@ -53,16 +53,64 @@ export default function App() {
     analysis: { reinforcedThemes?: string; strategicPivot?: string };
   } | null>(null);
 
+  // Load persisted data on mount
+  useEffect(() => {
+    // Check for auth token in localStorage
+    const token = localStorage.getItem('auth_token');
+    const userData = localStorage.getItem('userData');
+
+    if (token && userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+
+        // Load recommendations for this user
+        const userKey = `recommendations_${parsedUser.email}`;
+        const savedRecommendations = localStorage.getItem(userKey);
+
+        if (savedRecommendations) {
+          const parsedRecs = JSON.parse(savedRecommendations);
+          setRecommendations(parsedRecs);
+        }
+      } catch (error) {
+        console.error('Failed to load persisted data:', error);
+      }
+    }
+  }, []);
+
   // Note: Mock data removed - now using real API calls
 
   const handleAuthSuccess = (userData: { name: string; email: string }) => {
     setUser(userData);
-    setCurrentStep('artist-input');
+
+    // Load recommendations for this user
+    const userKey = `recommendations_${userData.email}`;
+    const savedRecommendations = localStorage.getItem(userKey);
+
+    if (savedRecommendations) {
+      try {
+        const parsedRecs = JSON.parse(savedRecommendations);
+        setRecommendations(parsedRecs);
+        // If user has recommendations, send them to landing page
+        setCurrentStep('landing');
+      } catch (error) {
+        console.error('Failed to load recommendations:', error);
+        setCurrentStep('artist-input');
+      }
+    } else {
+      setCurrentStep('artist-input');
+    }
   };
 
   const handleLogout = () => {
     // Clear auth token
     clearAuthToken();
+
+    // Clear user-specific data from localStorage
+    if (user) {
+      const userKey = `recommendations_${user.email}`;
+      localStorage.removeItem(userKey);
+    }
 
     setUser(null);
     setCurrentStep('landing');
@@ -86,6 +134,11 @@ export default function App() {
       setRecommendations([]);
       setCurrentSessionId(null);
       setExplorationContext(null);
+
+      // Clear recommendations from localStorage
+      const userKey = `recommendations_${user.email}`;
+      localStorage.removeItem(userKey);
+
       setCurrentStep('artist-input');
     }
   };
@@ -195,14 +248,20 @@ export default function App() {
 
   const handleConversationComplete = (recs: Recommendation[]) => {
     setRecommendations(recs);
-    
+
     // Update session with recommendations
-    setSessions(sessions.map(s => 
-      s.id === currentSessionId 
+    setSessions(sessions.map(s =>
+      s.id === currentSessionId
         ? { ...s, recommendations: recs }
         : s
     ));
-    
+
+    // Save recommendations to localStorage
+    if (user) {
+      const userKey = `recommendations_${user.email}`;
+      localStorage.setItem(userKey, JSON.stringify(recs));
+    }
+
     setCurrentStep('recommendations');
   };
 
@@ -225,6 +284,13 @@ export default function App() {
     setRecommendations([]);
     setCurrentSessionId(null);
     setExplorationContext(null);
+
+    // Clear recommendations from localStorage
+    if (user) {
+      const userKey = `recommendations_${user.email}`;
+      localStorage.removeItem(userKey);
+    }
+
     setCurrentStep('artist-input');
   };
 
