@@ -1,4 +1,4 @@
-globalThis.__RAINDROP_GIT_COMMIT_SHA = "1c04ff69e9a4e03e77ae35ea6c2ee7ab49204111"; 
+globalThis.__RAINDROP_GIT_COMMIT_SHA = "553e074779576ae109b2a602de1d36d49d114d75"; 
 
 // node_modules/@liquidmetal-ai/raindrop-framework/dist/core/cors.js
 var matchOrigin = (request, env, config) => {
@@ -93,13 +93,84 @@ import { Service } from "./runtime.js";
 var portrait_service_default = class extends Service {
   async generatePortrait(data) {
     const portraitId = crypto.randomUUID();
-    this.env.logger.info("Generating portrait", { portraitId, userId: data.userId });
-    return {
+    this.env.logger.info("Generating portrait", {
       portraitId,
       userId: data.userId,
-      genres: ["Rock", "Jazz"],
-      eras: ["1970s", "1980s"]
-    };
+      hasArtistList: !!data.artistList
+    });
+    let artistData = data.artistList || data.artistData || "";
+    if (!artistData || artistData.trim().length === 0) {
+      throw new Error("No artist data provided");
+    }
+    const prompt = `You are a music analyst expert. Analyze the following Spotify listening history data and create a comprehensive listener portrait.
+
+Listening Data:
+${artistData.substring(0, 15e3)} ${artistData.length > 15e3 ? "... (truncated)" : ""}
+
+Generate a detailed portrait with:
+
+1. **Primary Genres** (5-7 genres): Identify the main genres in their listening habits
+2. **Geographic Centers** (3-5 locations): Identify the primary geographic origins of the artists (cities, regions, countries)
+3. **Key Eras** (3-5 time periods): Identify the main time periods or decades represented
+4. **Noteworthy Gaps** (4-6 gaps): Identify significant genres, regions, or eras that are notably absent or underrepresented
+
+IMPORTANT: Return your response as a valid JSON object with this exact structure:
+{
+  "primaryGenres": ["genre1", "genre2", ...],
+  "geographicCenters": ["location1", "location2", ...],
+  "keyEras": ["era1", "era2", ...],
+  "noteworthyGaps": ["gap1 - description", "gap2 - description", ...]
+}
+
+Be specific and insightful. For gaps, include explanations after a dash (e.g., "Latin American Music - No artists from South/Central America despite global dominance").`;
+    try {
+      const analysis = await this.env.AI.run("llama-3.3-70b", {
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        model: "llama-3.3-70b",
+        temperature: 0.7,
+        max_tokens: 2e3
+      });
+      const responseText = analysis.response || "";
+      this.env.logger.info("AI analysis response", { responseLength: responseText.length });
+      let jsonText = responseText.trim();
+      if (jsonText.startsWith("```json")) {
+        jsonText = jsonText.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+      } else if (jsonText.startsWith("```")) {
+        jsonText = jsonText.replace(/```\n?/g, "");
+      }
+      const portraitData = JSON.parse(jsonText);
+      return {
+        portraitId,
+        userId: data.userId,
+        // Old format for backward compatibility
+        genres: portraitData.primaryGenres || [],
+        eras: portraitData.keyEras || [],
+        // New format
+        primaryGenres: portraitData.primaryGenres || [],
+        geographicCenters: portraitData.geographicCenters || [],
+        keyEras: portraitData.keyEras || [],
+        noteworthyGaps: portraitData.noteworthyGaps || []
+      };
+    } catch (error) {
+      this.env.logger.error("Failed to analyze portrait with AI", {
+        errorMessage: error instanceof Error ? error.message : "Unknown error"
+      });
+      return {
+        portraitId,
+        userId: data.userId,
+        genres: ["Various Genres"],
+        eras: ["Mixed Eras"],
+        primaryGenres: ["Unable to analyze - AI error"],
+        geographicCenters: ["Unable to analyze - AI error"],
+        keyEras: ["Unable to analyze - AI error"],
+        noteworthyGaps: ["AI analysis failed - please try again"]
+      };
+    }
   }
   async getPortrait(portraitId) {
     this.env.logger.info("Getting portrait", { portraitId });

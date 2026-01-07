@@ -117,12 +117,16 @@ export default function App() {
       }
 
       // Map API response to Portrait type
+      // Backend returns both old format (genres, eras) and new format (primaryGenres, etc.)
+      // Prefer new format, fall back to old format for backward compatibility
       const generatedPortrait: Portrait = {
-        primaryGenres: data.portrait?.primaryGenres || [],
-        geographicCenters: data.portrait?.geographicCenters || [],
-        keyEras: data.portrait?.keyEras || [],
-        noteworthyGaps: data.portrait?.noteworthyGaps || [],
+        primaryGenres: data.primaryGenres || data.genres || [],
+        geographicCenters: data.geographicCenters || [],
+        keyEras: data.keyEras || data.eras || [],
+        noteworthyGaps: data.noteworthyGaps || [],
       };
+
+      console.log('Generated portrait:', generatedPortrait);
 
       setPortrait(generatedPortrait);
 
