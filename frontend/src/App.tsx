@@ -8,6 +8,7 @@ import { RecommendationsDisplay } from './components/RecommendationsDisplay';
 import { ListeningExperience } from './components/ListeningExperience';
 import { SessionHistory } from './components/SessionHistory';
 import { UserMenu } from './components/UserMenu';
+import { API_ENDPOINTS, getAuthHeaders, clearAuthToken } from './config/api';
 
 type AppStep = 'landing' | 'auth' | 'artist-input' | 'portrait' | 'conversation' | 'recommendations' | 'listening-experience' | 'session-history';
 
@@ -45,58 +46,13 @@ export default function App() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [explorationContext, setExplorationContext] = useState<{
     direction: 'reinforced' | 'pivot';
     analysis: { reinforcedThemes?: string; strategicPivot?: string };
   } | null>(null);
 
-  // TEMPORARY: Simulate returning user with active recommendations for testing
-  // Remove this useEffect after testing
-  useEffect(() => {
-    setUser({ name: 'Test User', email: 'test@example.com' });
-    setRecommendations([
-      {
-        id: '1',
-        title: 'To Pimp a Butterfly',
-        artist: 'Kendrick Lamar',
-        year: '2015',
-        reason: 'A perfect bridge into conscious Hip-Hop with jazz influences',
-        coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300'
-      },
-      {
-        id: '2',
-        title: 'Cosmogramma',
-        artist: 'Flying Lotus',
-        year: '2010',
-        reason: 'Electronic beats meeting jazz fusion - experimental yet accessible',
-        coverImage: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=300'
-      },
-      {
-        id: '3',
-        title: 'Vespertine',
-        artist: 'Björk',
-        year: '2001',
-        reason: 'Intimate electronic exploration with unconventional production',
-        coverImage: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300'
-      },
-      {
-        id: '4',
-        title: 'In Rainbows',
-        artist: 'Radiohead',
-        year: '2007',
-        reason: 'Experimental rock meeting electronic textures',
-        coverImage: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=300'
-      },
-      {
-        id: '5',
-        title: 'Madvillainy',
-        artist: 'Madvillain',
-        year: '2004',
-        reason: 'Abstract hip-hop with jazz-influenced production',
-        coverImage: 'https://images.unsplash.com/photo-1619983081563-430f63602796?w=300'
-      }
-    ]);
-  }, []);
+  // Note: Mock data removed - now using real API calls
 
   const handleAuthSuccess = (userData: { name: string; email: string }) => {
     setUser(userData);
@@ -104,6 +60,9 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    // Clear auth token
+    clearAuthToken();
+
     setUser(null);
     setCurrentStep('landing');
     setArtistList('');
@@ -111,6 +70,7 @@ export default function App() {
     setConversationHistory([]);
     setRecommendations([]);
     setCurrentSessionId(null);
+    setConversationId(null);
     setExplorationContext(null);
   };
 
@@ -137,59 +97,94 @@ export default function App() {
     setCurrentStep('artist-input');
   };
 
-  const handleArtistSubmit = (artists: string) => {
+  const handleArtistSubmit = async (artists: string) => {
     setArtistList(artists);
-    // In a real app, this would call an AI API to generate the portrait
-    // For now, we'll show a mock portrait
-    const mockPortrait: Portrait = {
-      primaryGenres: [
-        'Alternative Rock',
-        'Indie Folk',
-        'Dream Pop',
-        'Post-Punk Revival',
-        'Electronic/Chillwave'
-      ],
-      geographicCenters: [
-        'United States (Brooklyn, Portland)',
-        'United Kingdom (London, Manchester)',
-        'Canada (Montreal)'
-      ],
-      keyEras: [
-        '2000-2010',
-        '2010-2020',
-        'Late 1990s'
-      ],
-      noteworthyGaps: [
-        'Hip-Hop/R&B - Minimal representation despite mainstream dominance',
-        'Latin American Music - No artists from South/Central America',
-        'Jazz and its modern derivatives - Absence of contemporary jazz fusion',
-        'Classic Rock (1960s-1970s) - Limited engagement with foundational rock'
-      ]
-    };
-    setPortrait(mockPortrait);
-    
-    // Create new session
-    const newSession: Session = {
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      portrait: mockPortrait,
-      recommendations: []
-    };
-    setCurrentSessionId(newSession.id);
-    setSessions([...sessions, newSession]);
-    
-    setCurrentStep('portrait');
+
+    try {
+      // Call the portrait generation API
+      const response = await fetch(API_ENDPOINTS.generatePortrait, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          artistList: artists,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate portrait');
+      }
+
+      // Map API response to Portrait type
+      const generatedPortrait: Portrait = {
+        primaryGenres: data.portrait?.primaryGenres || [],
+        geographicCenters: data.portrait?.geographicCenters || [],
+        keyEras: data.portrait?.keyEras || [],
+        noteworthyGaps: data.portrait?.noteworthyGaps || [],
+      };
+
+      setPortrait(generatedPortrait);
+
+      // Create new session
+      const newSession: Session = {
+        id: data.portraitId || Date.now().toString(),
+        date: new Date().toISOString(),
+        portrait: generatedPortrait,
+        recommendations: []
+      };
+      setCurrentSessionId(newSession.id);
+      setSessions([...sessions, newSession]);
+
+      setCurrentStep('portrait');
+    } catch (error) {
+      console.error('Failed to generate portrait:', error);
+      // Show error to user - for now just log it
+      alert('Failed to generate portrait. Please try again.');
+    }
   };
 
-  const handleStartConversation = () => {
-    setCurrentStep('conversation');
-    // Initialize conversation with first question
-    setConversationHistory([
-      {
-        role: 'assistant',
-        content: 'Based on your portrait, I notice you haven\'t explored much Hip-Hop or R&B. This genre has incredible diversity - from conscious rap to neo-soul to trap. What aspect of Hip-Hop culture or sound interests you most, or what has kept you from exploring it?'
+  const handleStartConversation = async () => {
+    if (!currentSessionId) {
+      alert('No portrait found. Please generate a portrait first.');
+      return;
+    }
+
+    try {
+      // Start a conversation with the backend
+      const response = await fetch(API_ENDPOINTS.startConversation, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          portraitId: currentSessionId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to start conversation');
       }
-    ]);
+
+      // Store conversation ID
+      setConversationId(data.conversationId);
+
+      // Initialize conversation with first message from backend
+      const initialMessage = data.initialMessage ||
+        'Based on your portrait, I notice you haven\'t explored much Hip-Hop or R&B. This genre has incredible diversity - from conscious rap to neo-soul to trap. What aspect of Hip-Hop culture or sound interests you most, or what has kept you from exploring it?';
+
+      setConversationHistory([
+        {
+          role: 'assistant',
+          content: initialMessage
+        }
+      ]);
+
+      setCurrentStep('conversation');
+    } catch (error) {
+      console.error('Failed to start conversation:', error);
+      alert('Failed to start conversation. Please try again.');
+    }
   };
 
   const handleConversationComplete = (recs: Recommendation[]) => {
@@ -308,8 +303,9 @@ export default function App() {
         />
       )}
       
-      {currentStep === 'conversation' && (
+      {currentStep === 'conversation' && conversationId && (
         <ConversationInterface
+          conversationId={conversationId}
           conversationHistory={conversationHistory}
           setConversationHistory={setConversationHistory}
           onComplete={handleConversationComplete}

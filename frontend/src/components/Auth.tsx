@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Music, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { API_ENDPOINTS, setAuthToken } from '../config/api';
 
 interface AuthProps {
   onAuthSuccess: (user: { name: string; email: string }) => void;
@@ -14,33 +15,74 @@ export function Auth({ onAuthSuccess }: AuthProps) {
     password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSocialLogin = (provider: 'google') => {
     setIsLoading(true);
-    
-    // Mock social login
-    setTimeout(() => {
-      const mockUsers = {
-        google: { name: 'Google User', email: 'user@gmail.com' }
-      };
-      
-      onAuthSuccess(mockUsers[provider]);
-      setIsLoading(false);
-    }, 1500);
+    setError('Social login coming soon. Please use email/password for now.');
+    setIsLoading(false);
   };
 
-  const handleEmailAuth = (e: React.FormEvent) => {
+  const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
-    // Mock email/password authentication
-    setTimeout(() => {
-      onAuthSuccess({
-        name: formData.name || formData.email.split('@')[0],
-        email: formData.email
-      });
+    try {
+      if (mode === 'register') {
+        // Register new user
+        const response = await fetch(API_ENDPOINTS.register, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+            name: formData.name,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Registration failed');
+        }
+
+        // Store token and proceed
+        setAuthToken(data.token);
+        onAuthSuccess({
+          name: formData.name,
+          email: formData.email,
+        });
+      } else {
+        // Login existing user
+        const response = await fetch(API_ENDPOINTS.login, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Login failed');
+        }
+
+        // Store token and proceed
+        setAuthToken(data.token);
+        onAuthSuccess({
+          name: data.user?.name || formData.email.split('@')[0],
+          email: formData.email,
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Authentication failed. Please try again.');
+      console.error('Auth error:', err);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -153,6 +195,13 @@ export function Auth({ onAuthSuccess }: AuthProps) {
               <span className="px-4 bg-[#202020] text-gray-400 uppercase tracking-wide">Or email</span>
             </div>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-900/20 border-2 border-red-500 p-3 mb-4">
+              <p className="text-red-300 text-sm uppercase tracking-wide">{error}</p>
+            </div>
+          )}
 
           {/* Email/Password Form */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
