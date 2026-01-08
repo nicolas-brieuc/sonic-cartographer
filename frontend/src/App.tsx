@@ -72,6 +72,13 @@ export default function App() {
           const parsedRecs = JSON.parse(savedRecommendations);
           setRecommendations(parsedRecs);
         }
+
+        // Load session ID for this user
+        const sessionKey = `sessionId_${parsedUser.email}`;
+        const savedSessionId = localStorage.getItem(sessionKey);
+        if (savedSessionId) {
+          setCurrentSessionId(savedSessionId);
+        }
       } catch (error) {
         console.error('Failed to load persisted data:', error);
       }
@@ -86,6 +93,13 @@ export default function App() {
     // Load recommendations for this user
     const userKey = `recommendations_${userData.email}`;
     const savedRecommendations = localStorage.getItem(userKey);
+
+    // Load session ID for this user
+    const sessionKey = `sessionId_${userData.email}`;
+    const savedSessionId = localStorage.getItem(sessionKey);
+    if (savedSessionId) {
+      setCurrentSessionId(savedSessionId);
+    }
 
     if (savedRecommendations) {
       try {
@@ -109,7 +123,9 @@ export default function App() {
     // Clear user-specific data from localStorage
     if (user) {
       const userKey = `recommendations_${user.email}`;
+      const sessionKey = `sessionId_${user.email}`;
       localStorage.removeItem(userKey);
+      localStorage.removeItem(sessionKey);
     }
 
     setUser(null);
@@ -135,9 +151,11 @@ export default function App() {
       setCurrentSessionId(null);
       setExplorationContext(null);
 
-      // Clear recommendations from localStorage
+      // Clear recommendations and session from localStorage
       const userKey = `recommendations_${user.email}`;
+      const sessionKey = `sessionId_${user.email}`;
       localStorage.removeItem(userKey);
+      localStorage.removeItem(sessionKey);
 
       setCurrentStep('artist-input');
     }
@@ -194,6 +212,12 @@ export default function App() {
       };
       setCurrentSessionId(newSession.id);
       setSessions([...sessions, newSession]);
+
+      // Save session ID to localStorage
+      if (user) {
+        const sessionKey = `sessionId_${user.email}`;
+        localStorage.setItem(sessionKey, newSession.id);
+      }
 
       setCurrentStep('portrait');
     } catch (error) {
@@ -285,33 +309,63 @@ export default function App() {
     setCurrentSessionId(null);
     setExplorationContext(null);
 
-    // Clear recommendations from localStorage
+    // Clear recommendations and session from localStorage
     if (user) {
       const userKey = `recommendations_${user.email}`;
+      const sessionKey = `sessionId_${user.email}`;
       localStorage.removeItem(userKey);
+      localStorage.removeItem(sessionKey);
     }
 
     setCurrentStep('artist-input');
   };
 
-  const handleStartNewRound = (
+  const handleStartNewRound = async (
     direction: 'reinforced' | 'pivot',
     analysis: { reinforcedThemes?: string; strategicPivot?: string }
   ) => {
-    setExplorationContext({ direction, analysis });
-    setCurrentStep('conversation');
-    
-    // Initialize conversation based on the selected direction
-    const initialMessage = direction === 'reinforced'
-      ? `Great! You want to explore more of what resonated with you. ${analysis.reinforcedThemes}\n\nLet's refine this direction: What specific aspects of these albums would you like to explore deeper? Think about production style, lyrical themes, instrumentation, or cultural context.`
-      : `Interesting choice! You're ready to try a different approach. ${analysis.strategicPivot}\n\nLet's explore this pivot: What makes you curious about this alternative direction? Are there any specific artists, sounds, or themes from outside your usual listening that have caught your attention?`;
-    
-    setConversationHistory([
-      {
-        role: 'assistant',
-        content: initialMessage
+    if (!currentSessionId) {
+      alert('No session found. Please start a new journey.');
+      return;
+    }
+
+    try {
+      // Start a new conversation with the backend for this exploration round
+      const response = await fetch(API_ENDPOINTS.startConversation, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          portraitId: currentSessionId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to start conversation');
       }
-    ]);
+
+      // Store new conversation ID
+      setConversationId(data.conversationId);
+      setExplorationContext({ direction, analysis });
+
+      // Initialize conversation based on the selected direction
+      const initialMessage = direction === 'reinforced'
+        ? `Great! You want to explore more of what resonated with you. ${analysis.reinforcedThemes}\n\nLet's refine this direction: What specific aspects of these albums would you like to explore deeper? Think about production style, lyrical themes, instrumentation, or cultural context.`
+        : `Interesting choice! You're ready to try a different approach. ${analysis.strategicPivot}\n\nLet's explore this pivot: What makes you curious about this alternative direction? Are there any specific artists, sounds, or themes from outside your usual listening that have caught your attention?`;
+
+      setConversationHistory([
+        {
+          role: 'assistant',
+          content: initialMessage
+        }
+      ]);
+
+      setCurrentStep('conversation');
+    } catch (error) {
+      console.error('Failed to start new round:', error);
+      alert('Failed to start new round. Please try again.');
+    }
   };
 
   const handleGetNewRecommendations = () => {
