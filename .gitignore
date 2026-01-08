@@ -13,9 +13,11 @@ pnpm-lock.yaml
 .env.*.local
 *.env
 
-# Build outputs (keep backend/dist as it's part of deployment)
+# Build outputs
 frontend/dist/
 frontend/build/
+sonic-cartographer-backend/dist/
+*.tar.gz
 
 # Logs
 logs/

@@ -16,6 +16,10 @@ interface GenerateRecommendationsResponse {
 }
 
 export default class extends Service<Env> {
+  private async sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   async generateRecommendations(conversationId: string): Promise<GenerateRecommendationsResponse> {
     this.env.logger.info('Generating recommendations', { conversationId });
 
@@ -74,10 +78,11 @@ Focus on the gaps and preferences they expressed. Return ONLY the JSON array.`;
 
       const searchCriteria = JSON.parse(criteriaJson);
 
-      // Step 2: Search Discogs for REAL albums
+      // Step 2: Search Discogs for REAL albums (with delays to avoid rate limiting)
       const allAlbums: any[] = [];
 
-      for (const criteria of searchCriteria.slice(0, 5)) {
+      for (let i = 0; i < Math.min(searchCriteria.length, 5); i++) {
+        const criteria = searchCriteria[i];
         const albums = await this.env.DATA_ENRICHMENT_SERVICE.searchAlbums({
           genre: criteria.genre,
           style: criteria.style,
@@ -85,6 +90,11 @@ Focus on the gaps and preferences they expressed. Return ONLY the JSON array.`;
           limit: 10,
         });
         allAlbums.push(...albums);
+
+        // Add delay between requests to avoid rate limiting (except after last request)
+        if (i < Math.min(searchCriteria.length, 5) - 1) {
+          await this.sleep(500); // 500ms delay between requests
+        }
       }
 
       if (allAlbums.length === 0) {

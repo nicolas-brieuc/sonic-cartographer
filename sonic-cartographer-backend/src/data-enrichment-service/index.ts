@@ -30,6 +30,10 @@ interface Album {
 }
 
 export default class extends Service<Env> {
+  private async sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   async searchAlbums(request: SearchAlbumsRequest): Promise<Album[]> {
     this.env.logger.info('Searching albums on Discogs', {
       genre: request.genre,
@@ -53,45 +57,70 @@ export default class extends Service<Env> {
 
       const url = `https://api.discogs.com/database/search?${params.toString()}`;
 
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Discogs token=${this.env.DISCOGS_API_KEY}`,
-          'User-Agent': 'SonicCartographer/1.0 +https://soniccartographer.com',
-        },
-      });
+      // Retry logic with exponential backoff for rate limiting
+      let retries = 3;
+      let delay = 1000; // Start with 1 second
 
-      if (!response.ok) {
-        throw new Error(`Discogs API error: ${response.status}`);
-      }
-
-      const data: any = await response.json();
-      const results = (data.results || []) as DiscogsRelease[];
-
-      // Map to our Album format
-      const albums: Album[] = results
-        .filter((r: DiscogsRelease) => r.type === 'master' && r.title && r.year)
-        .map((r: DiscogsRelease) => {
-          // Extract artist from title (format is usually "Artist - Album")
-          const parts = (r.title || '').split(' - ');
-          const artist = parts.length > 1 && parts[0] ? parts[0].trim() : 'Unknown Artist';
-          const title = parts.length > 1 ? parts.slice(1).join(' - ').trim() : (r.title || 'Unknown Album');
-
-          return {
-            discogsId: r.master_id || r.id,
-            title,
-            artist,
-            year: r.year,
-            genres: r.genre || [],
-            country: r.country,
-          };
+      for (let attempt = 0; attempt < retries; attempt++) {
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Discogs token=${this.env.DISCOGS_API_KEY}`,
+            'User-Agent': 'SonicCartographer/1.0 +https://soniccartographer.com',
+          },
         });
 
-      this.env.logger.info('Found albums on Discogs', {
-        count: albums.length,
-        query: request,
-      });
+        if (response.status === 429) {
+          // Rate limited - wait and retry
+          if (attempt < retries - 1) {
+            this.env.logger.info('Rate limited by Discogs, retrying', {
+              attempt: attempt + 1,
+              delayMs: delay,
+            });
+            await this.sleep(delay);
+            delay *= 2; // Exponential backoff
+            continue;
+          } else {
+            throw new Error(`Discogs API error: ${response.status} (rate limited after retries)`);
+          }
+        }
 
-      return albums;
+        if (!response.ok) {
+          throw new Error(`Discogs API error: ${response.status}`);
+        }
+
+        // Success - parse and return results
+        const data: any = await response.json();
+        const results = (data.results || []) as DiscogsRelease[];
+
+        // Map to our Album format
+        const albums: Album[] = results
+          .filter((r: DiscogsRelease) => r.type === 'master' && r.title && r.year)
+          .map((r: DiscogsRelease) => {
+            // Extract artist from title (format is usually "Artist - Album")
+            const parts = (r.title || '').split(' - ');
+            const artist = parts.length > 1 && parts[0] ? parts[0].trim() : 'Unknown Artist';
+            const title = parts.length > 1 ? parts.slice(1).join(' - ').trim() : (r.title || 'Unknown Album');
+
+            return {
+              discogsId: r.master_id || r.id,
+              title,
+              artist,
+              year: r.year,
+              genres: r.genre || [],
+              country: r.country,
+            };
+          });
+
+        this.env.logger.info('Found albums on Discogs', {
+          count: albums.length,
+          query: request,
+        });
+
+        return albums;
+      }
+
+      // Should not reach here, but return empty array as fallback
+      return [];
     } catch (error) {
       this.env.logger.error('Failed to search Discogs', {
         error: error instanceof Error ? error.message : 'Unknown error',
