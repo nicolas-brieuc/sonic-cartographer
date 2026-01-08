@@ -100,15 +100,23 @@ export function RecommendationsDisplay({
             >
               <div className="flex gap-6">
                 {/* Album Cover Image */}
-                {rec.coverImage && (
-                  <div className="flex-shrink-0">
-                    <img 
-                      src={rec.coverImage} 
+                <div className="flex-shrink-0">
+                  {rec.coverImage ? (
+                    <img
+                      src={rec.coverImage}
                       alt={`${rec.title} album cover`}
                       className="w-32 h-32 object-cover border-2 border-white"
+                      onError={(e) => {
+                        // Fallback if image fails to load
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                      }}
                     />
+                  ) : null}
+                  <div className={`w-32 h-32 bg-[#303030] border-2 border-white flex items-center justify-center ${rec.coverImage ? 'hidden' : ''}`}>
+                    <Music className="w-12 h-12 text-gray-600" />
                   </div>
-                )}
+                </div>
                 
                 <div className="flex gap-4 flex-1">
                   {/* Number Badge */}

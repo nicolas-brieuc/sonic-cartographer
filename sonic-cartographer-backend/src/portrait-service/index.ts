@@ -54,11 +54,11 @@ IMPORTANT: Return your response as a valid JSON object with this exact structure
   "primaryGenres": ["genre1", "genre2", ...],
   "geographicCenters": ["location1", "location2", ...],
   "keyEras": ["era1", "era2", ...],
-  "noteworthyGaps": ["gap1 - description", "gap2 - description", ...],
+  "noteworthyGaps": ["[Genre/Region/Era] - [Explanation of absence]", "[Genre/Region/Era] - [Explanation of absence]", ...],
   "summary": "A 2-3 sentence personalized summary synthesizing the portrait findings and highlighting opportunities for exploration"
 }
 
-Be specific and insightful. For gaps, include explanations after a dash (e.g., "Latin American Music - No artists from South/Central America despite global dominance").
+Be specific and insightful. For gaps, use the format "[Category] - [Explanation]" where the category is the missing genre, region, or era, and the explanation describes why it's notable.
 
 The summary should be conversational and encouraging, mentioning specific genres/regions from the portrait data and exciting opportunities ahead.`;
 

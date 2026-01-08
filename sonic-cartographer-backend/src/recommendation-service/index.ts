@@ -83,12 +83,29 @@ Focus on the gaps and preferences they expressed. Return ONLY the JSON array.`;
 
       for (let i = 0; i < Math.min(searchCriteria.length, 5); i++) {
         const criteria = searchCriteria[i];
-        const albums = await this.env.DATA_ENRICHMENT_SERVICE.searchAlbums({
+
+        // Try search with all criteria first
+        let albums = await this.env.DATA_ENRICHMENT_SERVICE.searchAlbums({
           genre: criteria.genre,
           style: criteria.style,
           country: criteria.country,
           limit: 10,
         });
+
+        // If no results, retry with just genre (more likely to succeed)
+        if (albums.length === 0 && criteria.genre) {
+          this.env.logger.info('No results with specific criteria, retrying with genre only', {
+            originalGenre: criteria.genre,
+            originalStyle: criteria.style,
+            originalCountry: criteria.country
+          });
+
+          albums = await this.env.DATA_ENRICHMENT_SERVICE.searchAlbums({
+            genre: criteria.genre,
+            limit: 20, // Get more results since we're being less specific
+          });
+        }
+
         allAlbums.push(...albums);
 
         // Add delay between requests to avoid rate limiting (except after last request)
@@ -98,7 +115,7 @@ Focus on the gaps and preferences they expressed. Return ONLY the JSON array.`;
       }
 
       if (allAlbums.length === 0) {
-        throw new Error('No albums found on Discogs');
+        throw new Error('No albums found on Discogs - try providing more specific artist preferences');
       }
 
       this.env.logger.info('Found albums from Discogs', { count: allAlbums.length });
@@ -151,7 +168,7 @@ IMPORTANT: Only use albums from the list above. Return ONLY the JSON array.`;
             year: album.year,
             reason: sel.reason,
             reviewLink: `https://www.discogs.com/master/${album.discogsId}`,
-            coverImage: undefined,
+            coverImage: album.coverImage,
           };
         })
         .filter((r: any) => r !== null)

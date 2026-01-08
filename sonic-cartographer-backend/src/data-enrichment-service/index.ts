@@ -18,6 +18,8 @@ interface DiscogsRelease {
   country?: string;
   master_id?: number;
   type: string;
+  cover_image?: string;
+  thumb?: string;
 }
 
 interface Album {
@@ -27,6 +29,7 @@ interface Album {
   year: string;
   genres: string[];
   country?: string;
+  coverImage?: string;
 }
 
 export default class extends Service<Env> {
@@ -108,6 +111,7 @@ export default class extends Service<Env> {
               year: r.year,
               genres: r.genre || [],
               country: r.country,
+              coverImage: r.cover_image || r.thumb,
             };
           });
 
