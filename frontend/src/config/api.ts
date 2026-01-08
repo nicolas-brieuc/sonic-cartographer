@@ -27,6 +27,10 @@ export const API_ENDPOINTS = {
   generateRecommendations: (conversationId: string) => `${API_BASE_URL}/v1/conversations/${conversationId}/recommendations`,
   emailRecommendations: `${API_BASE_URL}/v1/recommendations/email`,
 
+  // Listening Experience
+  submitFeedback: `${API_BASE_URL}/v1/listening-experience/feedback`,
+  getAnalysis: (feedbackId: string) => `${API_BASE_URL}/v1/listening-experience/analysis/${feedbackId}`,
+
   // Health check
   health: `${API_BASE_URL}/health`,
 } as const;

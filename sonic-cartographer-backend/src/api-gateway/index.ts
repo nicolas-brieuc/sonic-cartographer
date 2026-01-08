@@ -202,6 +202,62 @@ app.post('/v1/recommendations/email', async (c) => {
   }
 });
 
+// Submit listening experience feedback
+app.post('/v1/listening-experience/feedback', async (c) => {
+  try {
+    const user = await validateToken(c);
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const body = await c.req.json();
+
+    c.env.logger.info('Submitting listening feedback', {
+      userId: user.userId,
+      feedbackCount: body.feedback?.length
+    });
+
+    const result = await c.env.LISTENING_EXPERIENCE_SERVICE.submitFeedback({
+      userId: user.userId,
+      sessionId: body.sessionId,
+      feedback: body.feedback
+    });
+
+    return c.json(result, 200);
+  } catch (error) {
+    c.env.logger.error('Failed to submit feedback', {
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    return handleJsonError(error, c);
+  }
+});
+
+// Get listening experience analysis
+app.get('/v1/listening-experience/analysis/:feedbackId', async (c) => {
+  try {
+    const user = await validateToken(c);
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const feedbackId = c.req.param('feedbackId');
+
+    c.env.logger.info('Getting feedback analysis', {
+      userId: user.userId,
+      feedbackId
+    });
+
+    const result = await c.env.LISTENING_EXPERIENCE_SERVICE.getAnalysis(feedbackId);
+
+    return c.json(result, 200);
+  } catch (error) {
+    c.env.logger.error('Failed to get analysis', {
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    return handleJsonError(error, c);
+  }
+});
+
 export default class extends Service<Env> {
   async fetch(request: Request): Promise<Response> {
     const honoCtx = {

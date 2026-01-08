@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Headphones, Star, MessageSquare, TrendingUp, TrendingDown } from 'lucide-react';
 import { Recommendation, Session } from '../App';
+import { API_ENDPOINTS, getAuthHeaders } from '../config/api';
 
 interface ListeningExperienceProps {
   recommendations: Recommendation[];
@@ -41,6 +42,8 @@ export function ListeningExperience({
     strategicPivot?: string;
   } | null>(null);
   const [selectedDirection, setSelectedDirection] = useState<'reinforced' | 'pivot' | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [feedbackId, setFeedbackId] = useState<string | null>(null);
 
   const handleScreeningSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,9 +59,9 @@ export function ListeningExperience({
     }
   };
 
-  const handleFeedbackSubmit = (e: React.FormEvent) => {
+  const handleFeedbackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const currentAlbum = recommendations.find(r => r.id === selectedAlbums[currentAlbumIndex]);
     if (!currentAlbum) return;
 
@@ -81,40 +84,92 @@ export function ListeningExperience({
     if (currentAlbumIndex < selectedAlbums.length - 1) {
       setCurrentAlbumIndex(currentAlbumIndex + 1);
     } else {
-      // Generate analysis
-      generateAnalysis(updatedFeedback);
-      
+      // Submit to backend and get AI analysis
+      await submitFeedbackToBackend(updatedFeedback);
+
       // Save to session
       if (sessionId) {
-        setSessions(sessions.map(s => 
-          s.id === sessionId 
+        setSessions(sessions.map(s =>
+          s.id === sessionId
             ? { ...s, feedback: updatedFeedback }
             : s
         ));
       }
-      
+
       setStep('analysis');
     }
   };
 
-  const generateAnalysis = (feedback: AlbumFeedback[]) => {
-    const positiveRatings = feedback.filter(f => f.rating >= 4);
-    const negativeRatings = feedback.filter(f => f.rating <= 2);
+  const submitFeedbackToBackend = async (feedback: AlbumFeedback[]) => {
+    setIsAnalyzing(true);
 
-    if (feedback.length >= 3) {
+    try {
+      // Map feedback to include album details
+      const feedbackWithDetails = feedback.map(f => {
+        const album = recommendations.find(r => r.id === f.albumId);
+        return {
+          albumId: f.albumId,
+          albumTitle: album?.title || 'Unknown Album',
+          artist: album?.artist || 'Unknown Artist',
+          rating: f.rating,
+          rationale: f.rationale,
+          resonantElement: f.resonantElement
+        };
+      });
+
+      // Submit feedback to backend
+      const response = await fetch(API_ENDPOINTS.submitFeedback, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          sessionId: sessionId,
+          feedback: feedbackWithDetails
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to submit feedback');
+      }
+
+      // Store feedback ID
+      setFeedbackId(data.feedbackId);
+
+      // Get analysis from backend
+      const analysisResponse = await fetch(API_ENDPOINTS.getAnalysis(data.feedbackId), {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
+
+      const analysisData = await analysisResponse.json();
+
+      if (!analysisResponse.ok) {
+        throw new Error(analysisData.error || 'Failed to get analysis');
+      }
+
+      // Set analysis from AI
+      setAnalysis({
+        reinforcedThemes: analysisData.reinforcedThemes,
+        strategicPivot: analysisData.strategicPivot
+      });
+    } catch (error) {
+      console.error('Failed to submit feedback:', error);
+
+      // Fallback to basic analysis
+      const positiveRatings = feedback.filter(f => f.rating >= 4);
+      const negativeRatings = feedback.filter(f => f.rating <= 2);
+
       setAnalysis({
         reinforcedThemes: positiveRatings.length > 0
-          ? 'Based on your high ratings, you seem to resonate with experimental Hip-Hop that incorporates jazz elements and introspective lyricism. Artists like Kendrick Lamar and Flying Lotus represent a fusion approach you might want to explore deeper.'
-          : 'Need more positive ratings to identify reinforced themes.',
+          ? 'Based on your high ratings, you appreciate the albums that resonated with you. We\'ll explore similar territory.'
+          : 'We need more positive feedback to identify clear patterns.',
         strategicPivot: negativeRatings.length > 0
-          ? 'Your lukewarm response to some albums suggests you might prefer more accessible entry points. Consider exploring Neo-Soul or Alternative R&B as a gentler bridge into Hip-Hop culture.'
-          : 'Based on your overall positive response, you might be ready for more challenging works in the genre.'
+          ? 'Your lukewarm responses suggest we should try different approaches or entry points.'
+          : 'Your overall positive response indicates you\'re enjoying the direction. Let\'s continue exploring.'
       });
-    } else {
-      setAnalysis({
-        reinforcedThemes: 'Not enough albums reviewed yet',
-        strategicPivot: 'Please listen to at least 3 albums for meaningful analysis'
-      });
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -317,7 +372,7 @@ export function ListeningExperience({
         )}
 
         {/* Analysis Step */}
-        {step === 'analysis' && analysis && (
+        {step === 'analysis' && (
           <div className="space-y-6">
             <div className="bg-[#202020] border-4 border-white p-8">
               <div className="flex items-center gap-3 mb-6 border-b-2 border-gray-700 pb-4">
@@ -327,7 +382,23 @@ export function ListeningExperience({
                 <h2 className="text-white uppercase tracking-wide">Your Listening Analysis</h2>
               </div>
 
-              {feedbackList.length >= 3 ? (
+              {/* Loading State */}
+              {isAnalyzing && (
+                <div className="bg-[#202020] border-2 border-white p-6 text-center">
+                  <div className="animate-pulse">
+                    <div className="w-16 h-16 bg-[#ff0055] mx-auto mb-4 flex items-center justify-center">
+                      <MessageSquare className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-white mb-2 uppercase tracking-wide">Analyzing Your Feedback...</h3>
+                    <p className="text-gray-400 text-sm">
+                      Using AI to understand your musical preferences and generate personalized insights.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Analysis Results */}
+              {!isAnalyzing && analysis && feedbackList.length >= 3 ? (
                 <div className="space-y-6">
                   {/* Reinforced Themes */}
                   <div className="bg-[#202020] border-2 border-white p-6">
