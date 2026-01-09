@@ -2,6 +2,7 @@ import { Service } from '@liquidmetal-ai/raindrop-framework';
 import { Env } from './raindrop.gen';
 
 interface SearchAlbumsRequest {
+  query?: string;
   genre?: string;
   style?: string;
   year?: string;
@@ -39,6 +40,7 @@ export default class extends Service<Env> {
 
   async searchAlbums(request: SearchAlbumsRequest): Promise<Album[]> {
     this.env.logger.info('Searching albums on Discogs', {
+      query: request.query,
       genre: request.genre,
       style: request.style,
       country: request.country,
@@ -50,6 +52,11 @@ export default class extends Service<Env> {
       const params = new URLSearchParams();
       params.append('type', 'master'); // Search for master releases (canonical albums)
       params.append('format', 'album');
+
+      // If query is provided, use it as the main search term
+      if (request.query) {
+        params.append('q', request.query);
+      }
 
       if (request.genre) params.append('genre', request.genre);
       if (request.style) params.append('style', request.style);

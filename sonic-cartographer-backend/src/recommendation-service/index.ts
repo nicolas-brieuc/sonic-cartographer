@@ -78,39 +78,139 @@ Focus on the gaps and preferences they expressed. Return ONLY the JSON array.`;
 
       const searchCriteria = JSON.parse(criteriaJson);
 
-      // Step 2: Search Discogs for REAL albums (with delays to avoid rate limiting)
+      // Step 2: Hybrid approach - LLM suggests albums, then verify in Discogs
       const allAlbums: any[] = [];
+      const seenArtists = new Set<string>(); // Track artists to enforce one-per-artist rule
 
       for (let i = 0; i < Math.min(searchCriteria.length, 5); i++) {
         const criteria = searchCriteria[i];
 
-        // Try search with all criteria first
-        let albums = await this.env.DATA_ENRICHMENT_SERVICE.searchAlbums({
-          genre: criteria.genre,
-          style: criteria.style,
-          country: criteria.country,
-          limit: 10,
-        });
+        // Step 2a: Ask LLM to suggest albums based on criteria
+        const suggestionPrompt = `Give me 8 real album recommendations matching these criteria:
+Genre: ${criteria.genre || 'any'}
+Style: ${criteria.style || 'any'}
+Country: ${criteria.country || 'any'}
+Year Range: ${criteria.yearRange || 'any'}
 
-        // If no results, retry with just genre (more likely to succeed)
-        if (albums.length === 0 && criteria.genre) {
-          this.env.logger.info('No results with specific criteria, retrying with genre only', {
-            originalGenre: criteria.genre,
-            originalStyle: criteria.style,
-            originalCountry: criteria.country
+Rules:
+- Only real albums that actually exist
+- Maximum one album per artist
+- Include year of release
+- Prefer critically acclaimed or influential albums
+
+Return as JSON array:
+[
+  { "title": "Album Title", "artist": "Artist Name", "year": "YYYY" },
+  ...
+]
+
+Return ONLY the JSON array.`;
+
+        let suggestedAlbums: any[] = [];
+
+        try {
+          const suggestionResponse = await this.env.AI.run('llama-3.3-70b', {
+            messages: [{ role: 'user', content: suggestionPrompt }],
+            model: 'llama-3.3-70b',
+            temperature: 0.7,
+            max_tokens: 800,
           });
 
-          albums = await this.env.DATA_ENRICHMENT_SERVICE.searchAlbums({
-            genre: criteria.genre,
-            limit: 20, // Get more results since we're being less specific
+          let suggestionJson = ((suggestionResponse as any).response || '[]').trim();
+          if (suggestionJson.startsWith('```')) {
+            suggestionJson = suggestionJson.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+          }
+
+          suggestedAlbums = JSON.parse(suggestionJson);
+          this.env.logger.info('LLM suggested albums', {
+            criteriaIndex: i,
+            suggestedCount: suggestedAlbums.length
           });
+        } catch (error) {
+          this.env.logger.error('Failed to get LLM suggestions', {
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+          // Will fall back to Discogs search below
         }
 
-        allAlbums.push(...albums);
+        // Step 2b: Verify suggested albums exist in Discogs
+        const verifiedAlbums: any[] = [];
 
-        // Add delay between requests to avoid rate limiting (except after last request)
+        for (const suggestion of suggestedAlbums) {
+          try {
+            // Skip if we already have an album from this artist
+            const artistLower = suggestion.artist.toLowerCase();
+            if (seenArtists.has(artistLower)) {
+              continue;
+            }
+
+            // Try to find this specific album in Discogs
+            const searchQuery = `${suggestion.artist} ${suggestion.title}`;
+            const discogsResults = await this.env.DATA_ENRICHMENT_SERVICE.searchAlbums({
+              query: searchQuery,
+              limit: 3,
+            });
+
+            if (discogsResults.length > 0 && discogsResults[0]) {
+              // Use the first match (most relevant)
+              const verifiedAlbum = discogsResults[0];
+              verifiedAlbums.push(verifiedAlbum);
+              seenArtists.add(artistLower);
+              this.env.logger.info('Verified album in Discogs', {
+                suggested: searchQuery,
+                found: verifiedAlbum.title
+              });
+            }
+
+            // Add delay to avoid rate limiting
+            await this.sleep(400);
+          } catch (error) {
+            this.env.logger.warn('Failed to verify album', {
+              album: `${suggestion.artist} - ${suggestion.title}`,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+            // Continue to next suggestion
+          }
+        }
+
+        // Step 2c: If we got verified albums, use them; otherwise fall back to Discogs search
+        if (verifiedAlbums.length > 0) {
+          this.env.logger.info('Using verified LLM suggestions', { count: verifiedAlbums.length });
+          allAlbums.push(...verifiedAlbums);
+        } else {
+          this.env.logger.info('No verified albums, falling back to Discogs search');
+
+          // Fallback: Direct Discogs search (same as before)
+          let albums = await this.env.DATA_ENRICHMENT_SERVICE.searchAlbums({
+            genre: criteria.genre,
+            style: criteria.style,
+            country: criteria.country,
+            limit: 10,
+          });
+
+          if (albums.length === 0 && criteria.genre) {
+            albums = await this.env.DATA_ENRICHMENT_SERVICE.searchAlbums({
+              genre: criteria.genre,
+              limit: 20,
+            });
+          }
+
+          // Filter out artists we've already seen
+          const filteredAlbums = albums.filter((album: any) => {
+            const artistLower = album.artist.toLowerCase();
+            if (seenArtists.has(artistLower)) {
+              return false;
+            }
+            seenArtists.add(artistLower);
+            return true;
+          });
+
+          allAlbums.push(...filteredAlbums);
+        }
+
+        // Add delay between criteria (except after last)
         if (i < Math.min(searchCriteria.length, 5) - 1) {
-          await this.sleep(500); // 500ms delay between requests
+          await this.sleep(500);
         }
       }
 
