@@ -283,17 +283,17 @@ export function ListeningExperience({
             </div>
 
             {/* Album Info */}
-            <div className="bg-[#202020] border-2 border-white p-4 mb-6 flex gap-4 items-center">
+            <div className="bg-[#202020] border-2 border-white p-4 mb-6 flex gap-3 sm:gap-4 items-center">
               {currentAlbum.coverImage && (
-                <img 
-                  src={currentAlbum.coverImage} 
+                <img
+                  src={currentAlbum.coverImage}
                   alt={`${currentAlbum.title} album cover`}
-                  className="w-24 h-24 border-2 border-white object-cover shadow-md flex-shrink-0"
+                  className="w-16 h-16 sm:w-24 sm:h-24 border-2 border-white object-cover shadow-md flex-shrink-0"
                 />
               )}
               <div>
-                <h2 className="text-white uppercase tracking-wide">{currentAlbum.title}</h2>
-                <p className="text-gray-400">{currentAlbum.artist} • {currentAlbum.year}</p>
+                <h2 className="text-white uppercase tracking-wide text-sm sm:text-base">{currentAlbum.title}</h2>
+                <p className="text-gray-400 text-xs sm:text-sm">{currentAlbum.artist} • {currentAlbum.year}</p>
               </div>
             </div>
 
@@ -374,12 +374,12 @@ export function ListeningExperience({
         {/* Analysis Step */}
         {step === 'analysis' && (
           <div className="space-y-6">
-            <div className="bg-[#202020] border-4 border-white p-8">
+            <div className="bg-[#202020] border-4 border-white p-4 sm:p-8">
               <div className="flex items-center gap-3 mb-6 border-b-2 border-gray-700 pb-4">
-                <div className="w-12 h-12 bg-[#ff0055] flex items-center justify-center">
-                  <MessageSquare className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#ff0055] flex items-center justify-center">
+                  <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <h2 className="text-white uppercase tracking-wide">Your Listening Analysis</h2>
+                <h2 className="text-white uppercase tracking-wide text-sm sm:text-base">Your Listening Analysis</h2>
               </div>
 
               {/* Loading State */}
@@ -401,87 +401,87 @@ export function ListeningExperience({
               {!isAnalyzing && analysis && feedbackList.length >= 3 ? (
                 <div className="space-y-6">
                   {/* Reinforced Themes */}
-                  <div className="bg-[#202020] border-2 border-white p-6">
+                  <div className="bg-[#202020] border-2 border-white p-4 sm:p-6">
                     <div className="flex items-center gap-2 mb-3">
-                      <TrendingUp className="w-5 h-5 text-[#ff0055]" />
-                      <h3 className="text-white uppercase tracking-wide">Reinforced Themes</h3>
+                      <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-[#ff0055]" />
+                      <h3 className="text-white uppercase tracking-wide text-sm sm:text-base">Reinforced Themes</h3>
                     </div>
-                    <p className="text-gray-300 leading-relaxed">
+                    <p className="text-gray-300 leading-relaxed text-sm sm:text-base">
                       {analysis.reinforcedThemes}
                     </p>
                   </div>
 
                   {/* Strategic Pivot */}
-                  <div className="bg-[#202020] border-2 border-white p-6">
+                  <div className="bg-[#202020] border-2 border-white p-4 sm:p-6">
                     <div className="flex items-center gap-2 mb-3">
-                      <TrendingDown className="w-5 h-5 text-[#ff0055]" />
-                      <h3 className="text-white uppercase tracking-wide">Strategic Pivot</h3>
+                      <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-[#ff0055]" />
+                      <h3 className="text-white uppercase tracking-wide text-sm sm:text-base">Strategic Pivot</h3>
                     </div>
-                    <p className="text-gray-300 leading-relaxed">
+                    <p className="text-gray-300 leading-relaxed text-sm sm:text-base">
                       {analysis.strategicPivot}
                     </p>
                   </div>
 
                   {/* Direction Selection */}
                   {!selectedDirection ? (
-                    <div className="bg-[#202020] border-4 border-[#ff0055] p-6">
-                      <h3 className="text-white mb-4 uppercase tracking-wide">Choose Your Next Direction</h3>
-                      <p className="text-gray-300 mb-6 leading-relaxed">
+                    <div className="bg-[#202020] border-4 border-[#ff0055] p-4 sm:p-6">
+                      <h3 className="text-white mb-4 uppercase tracking-wide text-sm sm:text-base">Choose Your Next Direction</h3>
+                      <p className="text-gray-300 mb-6 leading-relaxed text-sm sm:text-base">
                         Select which strategic direction you&apos;d like to explore for your next set of recommendations:
                       </p>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button
                           onClick={() => setSelectedDirection('reinforced')}
-                          className="group bg-[#202020] border-2 border-white p-6 hover:border-[#ff0055] transition-all text-left"
+                          className="group bg-[#202020] border-2 border-white p-4 sm:p-6 hover:border-[#ff0055] transition-all text-left"
                         >
                           <div className="flex items-center gap-2 mb-3">
-                            <TrendingUp className="w-6 h-6 text-[#ff0055]" />
-                            <h4 className="text-white uppercase tracking-wide">Reinforced Themes</h4>
+                            <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-[#ff0055]" />
+                            <h4 className="text-white uppercase tracking-wide text-sm sm:text-base">Reinforced Themes</h4>
                           </div>
-                          <p className="text-sm text-gray-400 leading-relaxed">
+                          <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
                             Dive deeper into what you loved. Get recommendations that amplify your positive responses.
                           </p>
-                          <div className="mt-4 text-[#ff0055] text-sm group-hover:translate-x-1 transition-transform uppercase tracking-wide">
+                          <div className="mt-4 text-[#ff0055] text-xs sm:text-sm group-hover:translate-x-1 transition-transform uppercase tracking-wide">
                             Select this direction →
                           </div>
                         </button>
 
                         <button
                           onClick={() => setSelectedDirection('pivot')}
-                          className="group bg-[#202020] border-2 border-white p-6 hover:border-[#ff0055] transition-all text-left"
+                          className="group bg-[#202020] border-2 border-white p-4 sm:p-6 hover:border-[#ff0055] transition-all text-left"
                         >
                           <div className="flex items-center gap-2 mb-3">
-                            <TrendingDown className="w-6 h-6 text-[#ff0055]" />
-                            <h4 className="text-white uppercase tracking-wide">Strategic Pivot</h4>
+                            <TrendingDown className="w-5 h-5 sm:w-6 sm:h-6 text-[#ff0055]" />
+                            <h4 className="text-white uppercase tracking-wide text-sm sm:text-base">Strategic Pivot</h4>
                           </div>
-                          <p className="text-sm text-gray-400 leading-relaxed">
+                          <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
                             Try a different approach. Explore alternative entry points based on your feedback.
                           </p>
-                          <div className="mt-4 text-[#ff0055] text-sm group-hover:translate-x-1 transition-transform uppercase tracking-wide">
+                          <div className="mt-4 text-[#ff0055] text-xs sm:text-sm group-hover:translate-x-1 transition-transform uppercase tracking-wide">
                             Select this direction →
                           </div>
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-[#ff0055] border-2 border-[#ff0055] p-6 text-white">
-                      <h3 className="mb-3 uppercase tracking-wide">Direction Selected!</h3>
-                      <p className="leading-relaxed mb-6">
+                    <div className="bg-[#ff0055] border-2 border-[#ff0055] p-4 sm:p-6 text-white">
+                      <h3 className="mb-3 uppercase tracking-wide text-sm sm:text-base">Direction Selected!</h3>
+                      <p className="leading-relaxed mb-4 sm:mb-6 text-sm sm:text-base">
                         You&apos;ve chosen to explore <span className="font-semibold uppercase">
                           {selectedDirection === 'reinforced' ? 'Reinforced Themes' : 'Strategic Pivot'}
                         </span>. Let&apos;s have a conversation to refine your next set of recommendations.
                       </p>
-                      <div className="flex gap-3">
+                      <div className="flex flex-col sm:flex-row gap-3">
                         <button
                           onClick={() => onStartNewRound && onStartNewRound(selectedDirection, analysis)}
-                          className="flex-1 bg-white text-black py-3 border-2 border-white hover:bg-[#202020] hover:text-white transition-all uppercase tracking-wide"
+                          className="flex-1 bg-white text-black py-3 px-4 border-2 border-white hover:bg-[#202020] hover:text-white transition-all uppercase tracking-wide text-sm sm:text-base"
                         >
                           Start Guided Exploration
                         </button>
                         <button
                           onClick={() => setSelectedDirection(null)}
-                          className="px-4 py-3 text-white border-2 border-white hover:bg-white hover:text-black transition-all uppercase tracking-wide"
+                          className="sm:px-4 py-3 text-white border-2 border-white hover:bg-white hover:text-black transition-all uppercase tracking-wide text-sm sm:text-base"
                         >
                           Change
                         </button>
