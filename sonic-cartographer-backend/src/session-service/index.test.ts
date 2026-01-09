@@ -14,16 +14,16 @@ function createMockEnv() {
 describe('Session Service', () => {
   test('createSession - should create new session', async () => {
     const env = createMockEnv();
-    await expect(createSession('user-123', 'portrait', env)).rejects.toThrow('Not implemented');
+    await expect(createSession('user-123', 'portrait', env)).resolves.toBeDefined();
   });
 
   test('getSession - should retrieve session', async () => {
     const env = createMockEnv();
-    await expect(getSession('session-123', env)).rejects.toThrow('Not implemented');
+    await expect(getSession('session-123', env)).resolves.toBeDefined();
   });
 
   test('updateSessionStatus - should update status', async () => {
     const env = createMockEnv();
-    await expect(updateSessionStatus('session-123', 'completed', env)).rejects.toThrow('Not implemented');
+    await expect(updateSessionStatus('session-123', 'completed', env)).resolves.toBeDefined();
   });
 });

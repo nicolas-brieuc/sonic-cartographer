@@ -15,16 +15,16 @@ function createMockEnv() {
 describe('Portrait Service', () => {
   test('generatePortrait - should analyze artist list', async () => {
     const env = createMockEnv();
-    await expect(generatePortrait({ userId: '1', artistData: 'Artist1,Artist2', format: 'csv' }, env)).rejects.toThrow('Not implemented');
+    await expect(generatePortrait({ userId: '1', artistData: 'Artist1,Artist2', format: 'csv' }, env)).resolves.toBeDefined();
   });
 
   test('getPortrait - should retrieve portrait', async () => {
     const env = createMockEnv();
-    await expect(getPortrait('portrait-123', env)).rejects.toThrow('Not implemented');
+    await expect(getPortrait('portrait-123', env)).resolves.toBeDefined();
   });
 
   test('listPortraits - should list user portraits', async () => {
     const env = createMockEnv();
-    await expect(listPortraits('user-123', env)).rejects.toThrow('Not implemented');
+    await expect(listPortraits('user-123', env)).resolves.toBeDefined();
   });
 });

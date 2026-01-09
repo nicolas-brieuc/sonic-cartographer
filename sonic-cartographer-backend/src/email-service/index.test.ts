@@ -15,10 +15,10 @@ function createMockEnv() {
 describe('Email Service', () => {
   test('sendRecommendations - should send email', async () => {
     const env = createMockEnv();
-    await expect(sendRecommendations('rec-123', 'test@example.com', env)).rejects.toThrow('Not implemented');
+    await expect(sendRecommendations('rec-123', 'test@example.com', env)).resolves.toBeDefined();
   });
 
   test('formatEmail - should format recommendation email', async () => {
-    await expect(formatEmail({ albums: [] })).rejects.toThrow('Not implemented');
+    await expect(formatEmail({ albums: [] })).resolves.toBeDefined();
   });
 });

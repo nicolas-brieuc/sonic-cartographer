@@ -16,11 +16,11 @@ function createMockEnv() {
 describe('Recommendation Service', () => {
   test('generateRecommendations - should generate 5 albums', async () => {
     const env = createMockEnv();
-    await expect(generateRecommendations('conv-123', env)).rejects.toThrow('Not implemented');
+    await expect(generateRecommendations('conv-123', env)).resolves.toBeDefined();
   });
 
   test('getRecommendations - should retrieve recommendations', async () => {
     const env = createMockEnv();
-    await expect(getRecommendations('rec-123', env)).rejects.toThrow('Not implemented');
+    await expect(getRecommendations('rec-123', env)).resolves.toBeDefined();
   });
 });

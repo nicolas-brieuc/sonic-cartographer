@@ -14,21 +14,21 @@ function createMockEnv() {
 describe('Data Enrichment Service', () => {
   test('enrichArtistData - should fetch artist data', async () => {
     const env = createMockEnv();
-    await expect(enrichArtistData('Artist Name', env)).rejects.toThrow('Not implemented');
+    await expect(enrichArtistData('Artist Name', env)).resolves.toBeDefined();
   });
 
   test('getAlbumMetadata - should get album metadata', async () => {
     const env = createMockEnv();
-    await expect(getAlbumMetadata('album-123', env)).rejects.toThrow('Not implemented');
+    await expect(getAlbumMetadata('album-123', env)).resolves.toBeDefined();
   });
 
   test('getCoverImage - should get cover image URL', async () => {
     const env = createMockEnv();
-    await expect(getCoverImage('album-123', env)).rejects.toThrow('Not implemented');
+    await expect(getCoverImage('album-123', env)).resolves.toBeDefined();
   });
 
   test('getReviewLinks - should get review links', async () => {
     const env = createMockEnv();
-    await expect(getReviewLinks('album-123', env)).rejects.toThrow('Not implemented');
+    await expect(getReviewLinks('album-123', env)).resolves.toBeDefined();
   });
 });

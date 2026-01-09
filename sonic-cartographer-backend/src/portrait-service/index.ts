@@ -30,7 +30,7 @@ export default class extends Service<Env> {
     });
 
     // Parse the artist data - could be JSON string or plain text
-    let artistData = data.artistList || data.artistData || '';
+    const artistData = data.artistList || data.artistData || '';
 
     if (!artistData || artistData.trim().length === 0) {
       throw new Error('No artist data provided');

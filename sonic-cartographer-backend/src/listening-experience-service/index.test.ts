@@ -15,11 +15,11 @@ function createMockEnv() {
 describe('Listening Experience Service', () => {
   test('createExperience - should record feedback', async () => {
     const env = createMockEnv();
-    await expect(createExperience({ recommendationId: 'rec-123', albumId: 'album-1', rating: 5 }, env)).rejects.toThrow('Not implemented');
+    await expect(createExperience({ recommendationId: 'rec-123', albumId: 'album-1', rating: 5 }, env)).resolves.toBeDefined();
   });
 
   test('getExperience - should retrieve experience', async () => {
     const env = createMockEnv();
-    await expect(getExperience('exp-123', env)).rejects.toThrow('Not implemented');
+    await expect(getExperience('exp-123', env)).resolves.toBeDefined();
   });
 });

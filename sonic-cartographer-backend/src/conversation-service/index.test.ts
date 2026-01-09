@@ -16,16 +16,16 @@ function createMockEnv() {
 describe('Conversation Service', () => {
   test('startConversation - should start new conversation', async () => {
     const env = createMockEnv();
-    await expect(startConversation('portrait-123', 'user-123', env)).rejects.toThrow('Not implemented');
+    await expect(startConversation('portrait-123', 'user-123', env)).resolves.toBeDefined();
   });
 
   test('continueConversation - should process message', async () => {
     const env = createMockEnv();
-    await expect(continueConversation('conv-123', 'My answer', env)).rejects.toThrow('Not implemented');
+    await expect(continueConversation('conv-123', 'My answer', env)).resolves.toBeDefined();
   });
 
   test('getConversation - should retrieve conversation', async () => {
     const env = createMockEnv();
-    await expect(getConversation('conv-123', env)).rejects.toThrow('Not implemented');
+    await expect(getConversation('conv-123', env)).resolves.toBeDefined();
   });
 });

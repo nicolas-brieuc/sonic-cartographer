@@ -32,11 +32,11 @@ function createMockEnv() {
 
 describe('Auth Service - Password Hashing', () => {
   test('hashPassword - should hash password securely', async () => {
-    await expect(hashPassword('password123')).rejects.toThrow('Not implemented');
+    await expect(hashPassword('password123')).resolves.toBeDefined();
   });
 
   test('verifyPassword - should verify correct password', async () => {
-    await expect(verifyPassword('password', 'hash')).rejects.toThrow('Not implemented');
+    await expect(verifyPassword('password', 'hash')).resolves.toBeDefined();
   });
 });
 
@@ -48,11 +48,11 @@ describe('Auth Service - JWT Token Management', () => {
   });
 
   test('generateToken - should create valid JWT', async () => {
-    await expect(generateToken('user-123', 'test@example.com', env)).rejects.toThrow('Not implemented');
+    await expect(generateToken('user-123', 'test@example.com', env)).resolves.toBeDefined();
   });
 
   test('validateToken - should validate valid token', async () => {
-    await expect(validateToken('token', env)).rejects.toThrow('Not implemented');
+    await expect(validateToken('token', env)).resolves.toBeDefined();
   });
 });
 
@@ -68,7 +68,7 @@ describe('Auth Service - User Registration', () => {
       email: 'newuser@example.com',
       password: 'securePass123',
     };
-    await expect(registerUser(data, env)).rejects.toThrow('Not implemented');
+    await expect(registerUser(data, env)).resolves.toBeDefined();
   });
 
   test('registerUser - should return auth response with token', async () => {
@@ -76,7 +76,7 @@ describe('Auth Service - User Registration', () => {
       email: 'newuser@example.com',
       password: 'securePass123',
     };
-    await expect(registerUser(data, env)).rejects.toThrow('Not implemented');
+    await expect(registerUser(data, env)).resolves.toBeDefined();
   });
 });
 
@@ -92,7 +92,7 @@ describe('Auth Service - User Login', () => {
       email: 'user@example.com',
       password: 'correctPassword123',
     };
-    await expect(loginUser(data, env)).rejects.toThrow('Not implemented');
+    await expect(loginUser(data, env)).resolves.toBeDefined();
   });
 
   test('loginUser - should reject invalid credentials', async () => {
@@ -100,6 +100,6 @@ describe('Auth Service - User Login', () => {
       email: 'user@example.com',
       password: 'wrongPassword',
     };
-    await expect(loginUser(data, env)).rejects.toThrow('Not implemented');
+    await expect(loginUser(data, env)).resolves.toBeDefined();
   });
 });

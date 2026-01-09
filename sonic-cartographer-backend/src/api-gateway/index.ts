@@ -1,23 +1,25 @@
 import { Service } from '@liquidmetal-ai/raindrop-framework';
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { Env } from './raindrop.gen';
 import {
   validateToken,
   checkRateLimit,
   handleJsonError,
-  CORS_HEADERS,
 } from './utils';
 
 // Create Hono app with type-safe bindings
 const app = new Hono<{ Bindings: Env }>();
 
-// Handle OPTIONS requests for CORS preflight
-app.options('*', (_c) => {
-  return new Response(null, {
-    status: 204,
-    headers: CORS_HEADERS,
-  });
-});
+// Apply CORS middleware to all routes
+app.use('/*', cors({
+  origin: '*',
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  exposeHeaders: ['Content-Length'],
+  maxAge: 600,
+  credentials: false,
+}));
 
 // Health check endpoint with uptime (no /v1 prefix)
 app.get('/health', (c) => {
@@ -91,6 +93,27 @@ app.post('/v1/portraits/generate', async (c) => {
   }
 });
 
+// IMPORTANT: More specific routes must come before parameterized routes
+app.get('/v1/portraits/list', async (c) => {
+  try {
+    const user = await validateToken(c);
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    c.env.logger.info('Fetching portraits list', { userId: user.userId });
+    const result = await c.env.PORTRAIT_SERVICE.listPortraits(user.userId);
+    c.env.logger.info('Portraits list fetched successfully', { count: result.length });
+    return c.json(result, 200);
+  } catch (error) {
+    c.env.logger.error('Failed to fetch portraits list', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    return handleJsonError(error, c);
+  }
+});
+
 app.get('/v1/portraits/:portraitId', async (c) => {
   try {
     const user = await validateToken(c);
@@ -100,20 +123,6 @@ app.get('/v1/portraits/:portraitId', async (c) => {
 
     const portraitId = c.req.param('portraitId');
     const result = await c.env.PORTRAIT_SERVICE.getPortrait(portraitId);
-    return c.json(result, 200);
-  } catch (error) {
-    return handleJsonError(error, c);
-  }
-});
-
-app.get('/v1/portraits/list', async (c) => {
-  try {
-    const user = await validateToken(c);
-    if (!user) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
-
-    const result = await c.env.PORTRAIT_SERVICE.listPortraits(user.userId);
     return c.json(result, 200);
   } catch (error) {
     return handleJsonError(error, c);

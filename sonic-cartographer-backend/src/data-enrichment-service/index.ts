@@ -61,7 +61,7 @@ export default class extends Service<Env> {
       const url = `https://api.discogs.com/database/search?${params.toString()}`;
 
       // Retry logic with exponential backoff for rate limiting
-      let retries = 3;
+      const retries = 3;
       let delay = 1000; // Start with 1 second
 
       for (let attempt = 0; attempt < retries; attempt++) {

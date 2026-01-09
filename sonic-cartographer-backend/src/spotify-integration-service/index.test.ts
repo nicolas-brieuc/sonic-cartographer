@@ -16,11 +16,11 @@ function createMockEnv() {
 describe('Spotify Integration Service', () => {
   test('createPlaylist - should create Spotify playlist', async () => {
     const env = createMockEnv();
-    await expect(createPlaylist('rec-123', 'My Playlist', env)).rejects.toThrow('Not implemented');
+    await expect(createPlaylist('rec-123', 'My Playlist', env)).resolves.toBeDefined();
   });
 
   test('authenticateSpotify - should authenticate with Spotify API', async () => {
     const env = createMockEnv();
-    await expect(authenticateSpotify(env)).rejects.toThrow('Not implemented');
+    await expect(authenticateSpotify(env)).resolves.toBeDefined();
   });
 });

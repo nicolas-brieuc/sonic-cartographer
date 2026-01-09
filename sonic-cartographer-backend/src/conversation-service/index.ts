@@ -1,7 +1,7 @@
 import { Service } from '@liquidmetal-ai/raindrop-framework';
 import { Env } from './raindrop.gen';
 
-interface StartConversationRequest {
+interface _StartConversationRequest {
   portraitId: string;
   userId: string;
 }
@@ -11,7 +11,7 @@ interface StartConversationResponse {
   initialMessage: string;
 }
 
-interface ContinueConversationRequest {
+interface _ContinueConversationRequest {
   conversationId: string;
   message: string;
 }
