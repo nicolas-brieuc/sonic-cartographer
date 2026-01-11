@@ -137,14 +137,14 @@ export function RecommendationsDisplay({
                       {rec.reason}
                     </p>
 
-                    {rec.reviewLink && (
+                    {rec.spotifyLink && (
                       <a
-                        href={rec.reviewLink}
+                        href={rec.spotifyLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-[#ff0055] hover:text-white transition-colors text-xs sm:text-sm uppercase tracking-wide"
+                        className="inline-flex items-center gap-2 text-[#ff0055] hover:text-white transition-colors text-xs sm:text-sm uppercase tracking-wide mt-2"
                       >
-                        Read Review
+                        Listen on Spotify
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     )}

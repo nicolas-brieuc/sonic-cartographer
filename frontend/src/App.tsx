@@ -26,7 +26,7 @@ export type Recommendation = {
   artist: string;
   year: string;
   reason: string;
-  reviewLink?: string;
+  spotifyLink?: string;
   coverImage?: string;
 };
 

@@ -38,7 +38,7 @@ export function LandingPage({ onStart, onCaptureExperience, user, hasActiveRecom
           </h1>
           {showBothButtons ? (
             <p className="text-base sm:text-lg lg:text-xl text-[#ff0055] max-w-2xl mx-auto uppercase tracking-wide px-4">
-              Welcome back! Ready to capture your listening experience or explore new territory?
+              Welcome back! Ready to explore new territory?
             </p>
           ) : (
             <p className="text-base sm:text-lg lg:text-xl text-gray-400 max-w-2xl mx-auto px-4">
@@ -49,7 +49,7 @@ export function LandingPage({ onStart, onCaptureExperience, user, hasActiveRecom
         </div>
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-16">
           <div className="bg-[#202020] border-2 border-white p-6 hover:border-[#ff0055] transition-colors">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-12 h-12 bg-[#ff0055] flex items-center justify-center flex-shrink-0">
@@ -91,10 +91,10 @@ export function LandingPage({ onStart, onCaptureExperience, user, hasActiveRecom
               <div className="w-12 h-12 bg-[#ff0055] flex items-center justify-center flex-shrink-0">
                 <Headphones className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-white uppercase tracking-wide">Track Progress</h3>
+              <h3 className="text-white uppercase tracking-wide">Listen to new Music</h3>
             </div>
             <p className="text-sm text-gray-400">
-              Capture listening experiences and refine recommendations over time
+              Get personalized recommendations to fill the gaps in your listening habits
             </p>
           </div>
         </div>
@@ -145,9 +145,9 @@ export function LandingPage({ onStart, onCaptureExperience, user, hasActiveRecom
                 4
               </div>
               <div>
-                <h4 className="text-white uppercase tracking-wide mb-1">Discover & Track</h4>
+                <h4 className="text-white uppercase tracking-wide mb-1">Discover New Music</h4>
                 <p className="text-sm text-gray-400">
-                  Get personalized album recommendations and share your feedback
+                  Get personalized album recommendations to explore
                 </p>
               </div>
             </div>
@@ -155,29 +155,12 @@ export function LandingPage({ onStart, onCaptureExperience, user, hasActiveRecom
         </div>
 
         {/* CTA Button */}
-        {showBothButtons ? (
-          <div className="flex flex-col md:flex-row gap-4 mt-12 justify-center">
-            <button
-              onClick={onCaptureExperience}
-              className="bg-[#ff0055] text-white px-12 py-4 uppercase tracking-wider hover:bg-white hover:text-black transition-all border-2 border-[#ff0055]"
-            >
-              Capture Listening Experience
-            </button>
-            <button
-              onClick={onStart}
-              className="bg-white text-black px-12 py-4 uppercase tracking-wider hover:bg-[#ff0055] hover:text-white transition-all border-2 border-white"
-            >
-              Begin New Journey
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={onStart}
-            className="bg-[#ff0055] text-white px-12 py-4 uppercase tracking-wider hover:bg-white hover:text-black transition-all border-2 border-[#ff0055] mt-12"
-          >
-            Begin Your Musical Journey
-          </button>
-        )}
+        <button
+          onClick={onStart}
+          className="bg-[#ff0055] text-white px-12 py-4 uppercase tracking-wider hover:bg-white hover:text-black transition-all border-2 border-[#ff0055] mt-12"
+        >
+          {showBothButtons ? 'Begin New Journey' : 'Begin Your Musical Journey'}
+        </button>
 
         {/* Debug info for development */}
         {process.env.NODE_ENV === 'development' && (

@@ -93,7 +93,7 @@ export function ConversationInterface({
           artist: rec.artist,
           year: rec.year,
           reason: rec.reason,
-          reviewLink: rec.reviewLink,
+          spotifyLink: rec.spotifyLink,
           coverImage: rec.coverImage,
         }));
 
