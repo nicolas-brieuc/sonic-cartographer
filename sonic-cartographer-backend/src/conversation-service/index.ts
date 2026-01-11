@@ -38,7 +38,7 @@ export default class extends Service<Env> {
 
 Their Portrait Gaps: ${gapsText}
 
-Generate an engaging first question (2-3 sentences) that:
+Generate an engaging first question (1-2 sentences) that:
 1. Acknowledges one specific gap from their portrait
 2. Asks what aspect interests them or what has kept them from exploring it
 3. Is conversational and encouraging
@@ -162,7 +162,7 @@ Return ONLY the conclusion text.`;
 
 ${conversationHistory}
 
-Generate the next follow-up question (2-3 sentences) that:
+Generate the next follow-up question (1-2 sentences) that:
 1. Builds on what they just said
 2. Helps narrow down their preferences (production style vs lyrics, accessible vs challenging, specific artists/sounds, etc.)
 3. Is conversational and encouraging

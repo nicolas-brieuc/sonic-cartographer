@@ -7,7 +7,7 @@ interface Recommendation {
   artist: string;
   year: string;
   reason: string;
-  reviewLink?: string;
+  spotifyLink?: string;
   coverImage?: string;
 }
 
@@ -50,7 +50,7 @@ ${conversationHistory}
 
 And the user's portrait gaps: ${(portrait as any).noteworthyGaps?.join(', ') || 'various musical territories'}
 
-Extract 3-5 specific search criteria for finding albums. For each criterion, provide:
+Extract 3 specific search criteria for finding albums. For each criterion, provide:
 - genre: main genre (e.g., "Latin", "Electronic", "Jazz")
 - style: specific style if mentioned (e.g., "Bossa Nova", "Ambient", "Bebop")
 - country: geographic region if mentioned (e.g., "Brazil", "Morocco", "Cambodia")
@@ -82,11 +82,11 @@ Focus on the gaps and preferences they expressed. Return ONLY the JSON array.`;
       const allAlbums: any[] = [];
       const seenArtists = new Set<string>(); // Track artists to enforce one-per-artist rule
 
-      for (let i = 0; i < Math.min(searchCriteria.length, 5); i++) {
+      for (let i = 0; i < Math.min(searchCriteria.length, 3); i++) {
         const criteria = searchCriteria[i];
 
         // Step 2a: Ask LLM to suggest albums based on criteria
-        const suggestionPrompt = `Give me 8 real album recommendations matching these criteria:
+        const suggestionPrompt = `Give me 2 real album recommendations matching these criteria:
 Genre: ${criteria.genre || 'any'}
 Style: ${criteria.style || 'any'}
 Country: ${criteria.country || 'any'}
@@ -133,18 +133,21 @@ Return ONLY the JSON array.`;
           // Will fall back to Discogs search below
         }
 
-        // Step 2b: Verify suggested albums exist in Discogs
+        // Step 2b: Verify suggested albums exist in Discogs (parallelized)
         const verifiedAlbums: any[] = [];
 
-        for (const suggestion of suggestedAlbums) {
-          try {
-            // Skip if we already have an album from this artist
-            const artistLower = suggestion.artist.toLowerCase();
-            if (seenArtists.has(artistLower)) {
-              continue;
-            }
+        // Filter out albums from artists we've already seen
+        const uniqueSuggestions = suggestedAlbums.filter(suggestion => {
+          const artistLower = suggestion.artist.toLowerCase();
+          if (seenArtists.has(artistLower)) {
+            return false;
+          }
+          return true;
+        });
 
-            // Try to find this specific album in Discogs
+        // Verify all suggestions in parallel
+        const verificationPromises = uniqueSuggestions.map(async (suggestion) => {
+          try {
             const searchQuery = `${suggestion.artist} ${suggestion.title}`;
             const discogsResults = await this.env.DATA_ENRICHMENT_SERVICE.searchAlbums({
               query: searchQuery,
@@ -152,24 +155,30 @@ Return ONLY the JSON array.`;
             });
 
             if (discogsResults.length > 0 && discogsResults[0]) {
-              // Use the first match (most relevant)
               const verifiedAlbum = discogsResults[0];
-              verifiedAlbums.push(verifiedAlbum);
-              seenArtists.add(artistLower);
               this.env.logger.info('Verified album in Discogs', {
                 suggested: searchQuery,
                 found: verifiedAlbum.title
               });
+              return { album: verifiedAlbum, artist: suggestion.artist.toLowerCase() };
             }
-
-            // Add delay to avoid rate limiting
-            await this.sleep(400);
+            return null;
           } catch (error) {
             this.env.logger.warn('Failed to verify album', {
               album: `${suggestion.artist} - ${suggestion.title}`,
               error: error instanceof Error ? error.message : 'Unknown error'
             });
-            // Continue to next suggestion
+            return null;
+          }
+        });
+
+        const verificationResults = await Promise.allSettled(verificationPromises);
+
+        // Collect verified albums
+        for (const result of verificationResults) {
+          if (result.status === 'fulfilled' && result.value) {
+            verifiedAlbums.push(result.value.album);
+            seenArtists.add(result.value.artist);
           }
         }
 
@@ -209,8 +218,8 @@ Return ONLY the JSON array.`;
         }
 
         // Add delay between criteria (except after last)
-        if (i < Math.min(searchCriteria.length, 5) - 1) {
-          await this.sleep(500);
+        if (i < Math.min(searchCriteria.length, 3) - 1) {
+          await this.sleep(300); // Reduced delay since we're parallelizing
         }
       }
 
@@ -267,7 +276,6 @@ IMPORTANT: Only use albums from the list above. Return ONLY the JSON array.`;
             artist: album.artist,
             year: album.year,
             reason: sel.reason,
-            reviewLink: `https://www.discogs.com/master/${album.discogsId}`,
             coverImage: album.coverImage,
           };
         })
@@ -278,6 +286,27 @@ IMPORTANT: Only use albums from the list above. Return ONLY the JSON array.`;
       if (recommendations.length === 0) {
         throw new Error('Could not generate recommendations from Discogs results');
       }
+
+      // Step 4: Get and verify Spotify and Pitchfork links
+      for (let i = 0; i < recommendations.length; i++) {
+        const rec = recommendations[i];
+        if (!rec) continue;
+
+        // Create Spotify search link (reliable fallback)
+        // Format: https://open.spotify.com/search/artist%20album
+        const spotifySearchQuery = encodeURIComponent(`${rec.artist} ${rec.title}`);
+        rec.spotifyLink = `https://open.spotify.com/search/${spotifySearchQuery}`;
+
+        this.env.logger.info('Added Spotify search link', {
+          album: `${rec.artist} - ${rec.title}`,
+          url: rec.spotifyLink
+        });
+      }
+
+      this.env.logger.info('Added Spotify links', {
+        total: recommendations.length,
+        withSpotify: recommendations.filter(r => r.spotifyLink).length
+      });
 
       this.env.logger.info('Generated recommendations', {
         conversationId,
