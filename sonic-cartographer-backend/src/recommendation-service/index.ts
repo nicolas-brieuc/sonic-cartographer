@@ -264,8 +264,8 @@ IMPORTANT: Only use albums from the list above. Return ONLY the JSON array.`;
 
       const selections = JSON.parse(selectionJson);
 
-      // Map to our format with real album data and filter out albums without covers
-      let recommendations: Recommendation[] = selections
+      // Map to our format with real album data
+      const recommendations: Recommendation[] = selections
         .map((sel: any) => {
           const album = allAlbums.find((a) => a.discogsId === sel.discogsId);
           if (!album) return null;
@@ -279,110 +279,12 @@ IMPORTANT: Only use albums from the list above. Return ONLY the JSON array.`;
             coverImage: album.coverImage,
           };
         })
-        .filter((r: any) => r !== null && r.coverImage) // Only keep recommendations with cover images
+        .filter((r: any) => r !== null)
         .slice(0, 5);
-
-      // If we have fewer than 5 recommendations due to missing covers, try to fill the gaps
-      const selectedDiscogsIds = new Set(recommendations.map(r => r.albumId));
-      if (recommendations.length < 5) {
-        this.env.logger.info('Some recommendations missing covers, finding replacements', {
-          foundWithCovers: recommendations.length,
-          needed: 5 - recommendations.length
-        });
-
-        // Find additional albums with covers that weren't already selected
-        const additionalAlbums = allAlbums
-          .filter((album: any) =>
-            !selectedDiscogsIds.has(`discogs-${album.discogsId}`) &&
-            album.coverImage
-          )
-          .slice(0, 5 - recommendations.length);
-
-        // Use AI to write reasons for these replacement albums
-        if (additionalAlbums.length > 0) {
-          const replacementPrompt = `Based on this conversation about music preferences:
-${conversationHistory}
-
-Write a personalized 2-3 sentence reason for recommending each of these albums:
-${JSON.stringify(additionalAlbums, null, 2)}
-
-Return as JSON:
-[
-  {
-    "discogsId": <number>,
-    "reason": "Personalized explanation..."
-  },
-  ...
-]
-
-Return ONLY the JSON array.`;
-
-          try {
-            const replacementResponse = await this.env.AI.run('llama-3.3-70b', {
-              messages: [{ role: 'user', content: replacementPrompt }],
-              model: 'llama-3.3-70b',
-              temperature: 0.8,
-              max_tokens: 1000,
-            });
-
-            let replacementJson = ((replacementResponse as any).response || '[]').trim();
-            if (replacementJson.startsWith('```')) {
-              replacementJson = replacementJson.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-            }
-
-            const replacementReasons = JSON.parse(replacementJson);
-
-            // Add replacement recommendations
-            for (const replacement of replacementReasons) {
-              const album = additionalAlbums.find((a: any) => a.discogsId === replacement.discogsId);
-              if (album && album.coverImage) {
-                recommendations.push({
-                  albumId: `discogs-${album.discogsId}`,
-                  title: album.title,
-                  artist: album.artist,
-                  year: album.year,
-                  reason: replacement.reason,
-                  coverImage: album.coverImage,
-                });
-              }
-            }
-          } catch (error) {
-            this.env.logger.warn('Failed to generate reasons for replacement albums', {
-              error: error instanceof Error ? error.message : 'Unknown error'
-            });
-
-            // Fallback: add albums with generic reasons
-            for (const album of additionalAlbums) {
-              if (album.coverImage) {
-                recommendations.push({
-                  albumId: `discogs-${album.discogsId}`,
-                  title: album.title,
-                  artist: album.artist,
-                  year: album.year,
-                  reason: `This ${album.genres?.[0] || 'acclaimed'} album from ${album.year} offers a compelling exploration of the sounds you're looking to discover.`,
-                  coverImage: album.coverImage,
-                });
-              }
-            }
-          }
-
-          // Limit to 5 final recommendations
-          recommendations = recommendations.slice(0, 5);
-        }
-      }
-
-      // Log any albums that were filtered out due to missing covers
-      const filteredCount = selections.length - recommendations.length;
-      if (filteredCount > 0) {
-        this.env.logger.info('Filtered out recommendations without cover images', {
-          filteredCount,
-          finalCount: recommendations.length
-        });
-      }
 
       // Ensure we have at least some recommendations
       if (recommendations.length === 0) {
-        throw new Error('Could not generate recommendations with valid cover images');
+        throw new Error('Could not generate recommendations from Discogs results');
       }
 
       // Step 4: Get and verify Spotify and Pitchfork links
