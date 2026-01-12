@@ -45,6 +45,8 @@ export function RecommendationsDisplay({
             artist: rec.artist,
             year: rec.year,
             reason: rec.reason,
+            spotifyLink: rec.spotifyLink,
+            coverImage: rec.coverImage,
           }))
         }),
       });
@@ -96,16 +98,18 @@ export function RecommendationsDisplay({
           {recommendations.map((rec, index) => (
             <div
               key={rec.id}
-              className="bg-[#202020] border-2 border-white p-4 sm:p-6 hover:border-[#ff0055] transition-colors"
+              className="bg-[#202020] border-2 border-white p-6 hover:border-[#ff0055] transition-colors"
             >
-              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-                {/* Album Cover Image */}
-                <div className="flex-shrink-0">
+              <div className="flex flex-col md:flex-row gap-6">
+                {/* Column 1: Album Cover with Number Badge */}
+                <div className="flex-shrink-0" style={{position: 'relative', width: '192px', height: '192px'}}>
+                  {/* Album Cover Image */}
                   {rec.coverImage ? (
                     <img
                       src={rec.coverImage}
                       alt={`${rec.title} album cover`}
-                      className="w-24 h-24 sm:w-32 sm:h-32 object-cover border-2 border-white"
+                      style={{width: '192px', height: '192px', objectFit: 'cover'}}
+                      className="border-2 border-white"
                       onError={(e) => {
                         // Fallback if image fails to load
                         e.currentTarget.style.display = 'none';
@@ -113,42 +117,44 @@ export function RecommendationsDisplay({
                       }}
                     />
                   ) : null}
-                  <div className={`w-24 h-24 sm:w-32 sm:h-32 bg-[#303030] border-2 border-white flex items-center justify-center ${rec.coverImage ? 'hidden' : ''}`}>
-                    <Music className="w-8 h-8 sm:w-12 sm:h-12 text-gray-600" />
+                  <div className={`bg-[#303030] border-2 border-white flex items-center justify-center ${rec.coverImage ? 'hidden' : ''}`} style={{width: '192px', height: '192px'}}>
+                    <Music className="w-16 h-16 text-gray-600" />
+                  </div>
+
+                  {/* Number Badge on top-left corner of cover */}
+                  <div style={{position: 'absolute', top: '0', left: '0', width: '40px', height: '40px', zIndex: 10}} className="bg-white text-black flex items-center justify-center text-xl font-bold border-2 border-white">
+                    {index + 1}
                   </div>
                 </div>
 
-                <div className="flex gap-3 sm:gap-4 flex-1">
-                  {/* Number Badge */}
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white text-black flex items-center justify-center text-lg sm:text-xl font-bold">
-                      {index + 1}
-                    </div>
-                  </div>
+                {/* Column 2: All text content */}
+                <div className="flex-1 space-y-2">
+                  {/* Title */}
+                  <h2 className="text-white uppercase tracking-wide text-base font-bold">{rec.title}</h2>
 
-                  {/* Content */}
-                  <div className="flex-1 space-y-2">
-                    <div>
-                      <h2 className="text-white uppercase tracking-wide text-sm sm:text-base">{rec.title}</h2>
-                      <p className="text-gray-400 text-xs sm:text-sm">{rec.artist} • {rec.year}</p>
-                    </div>
+                  {/* Artist */}
+                  <p className="text-gray-400 text-sm">{rec.artist}</p>
 
-                    <p className="text-gray-300 text-xs sm:text-sm leading-relaxed">
-                      {rec.reason}
-                    </p>
+                  {/* Year */}
+                  <p className="text-gray-500 text-xs">{rec.year}</p>
 
-                    {rec.spotifyLink && (
-                      <a
-                        href={rec.spotifyLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-[#ff0055] hover:text-white transition-colors text-xs sm:text-sm uppercase tracking-wide mt-2"
-                      >
-                        Listen on Spotify
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                  </div>
+                  {/* Summary/Reason */}
+                  <p className="text-gray-300 text-sm leading-relaxed pt-1">
+                    {rec.reason}
+                  </p>
+
+                  {/* Spotify Link */}
+                  {rec.spotifyLink && (
+                    <a
+                      href={rec.spotifyLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-[#ff0055] hover:text-white transition-colors text-sm uppercase tracking-wide pt-1"
+                    >
+                      Listen on Spotify
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  )}
                 </div>
               </div>
             </div>

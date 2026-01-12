@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { User, LogOut, Settings, History } from 'lucide-react';
+import { User, LogOut, History } from 'lucide-react';
 
 interface UserMenuProps {
   user: { name: string; email: string };
@@ -52,8 +52,8 @@ export function UserMenu({ user, onLogout, onViewHistory }: UserMenuProps) {
           </div>
 
           {/* Menu Items */}
-          <div className="py-2">
-            {onViewHistory && (
+          {onViewHistory && (
+            <div className="py-2">
               <button
                 onClick={() => {
                   onViewHistory();
@@ -64,16 +64,8 @@ export function UserMenu({ user, onLogout, onViewHistory }: UserMenuProps) {
                 <History className="w-4 h-4" />
                 Session History
               </button>
-            )}
-            
-            <button
-              onClick={() => setIsOpen(false)}
-              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-white hover:bg-[#ff0055] transition-colors uppercase tracking-wide"
-            >
-              <Settings className="w-4 h-4" />
-              Settings
-            </button>
-          </div>
+            </div>
+          )}
 
           {/* Logout */}
           <div className="border-t-2 border-gray-700">
