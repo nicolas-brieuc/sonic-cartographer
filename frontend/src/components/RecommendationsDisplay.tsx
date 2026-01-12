@@ -25,12 +25,6 @@ export function RecommendationsDisplay({
     setShowListeningModal(true);
   };
 
-  const handleSpotifyPlaylist = () => {
-    // In a real app, this would integrate with Spotify API to create a playlist
-    alert('Spotify playlist feature coming soon! This would create a playlist with these 5 albums.');
-    setShowListeningModal(false);
-  };
-
   const handleEmailRecommendations = async () => {
     setEmailLoading(true);
     setEmailMessage(null);
@@ -198,27 +192,19 @@ export function RecommendationsDisplay({
               <div className="border-b-2 border-[#ff0055] pb-4">
                 <h2 className="text-white uppercase tracking-wide text-center">Start Your Listening Journey</h2>
                 <p className="text-gray-400 text-sm text-center mt-2">
-                  Choose how you'd like to receive your recommendations
+                  Enjoy the curated recommendations!
                 </p>
               </div>
 
               <div className="space-y-4">
                 <button
-                  onClick={handleSpotifyPlaylist}
-                  className="w-full flex items-center justify-center gap-3 bg-[#ff0055] text-white px-8 py-4 uppercase tracking-wider hover:bg-white hover:text-black transition-all border-2 border-[#ff0055]"
-                >
-                  <Music className="w-5 h-5" />
-                  Create Spotify Playlist
-                </button>
-
-                <button
                   onClick={handleEmailRecommendations}
                   disabled={emailLoading}
-                  className="w-full flex items-center justify-center gap-3 bg-white text-black px-8 py-4 uppercase tracking-wider hover:bg-[#ff0055] hover:text-white transition-all border-2 border-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-3 bg-[#ff0055] text-white px-8 py-4 uppercase tracking-wider hover:bg-white hover:text-black transition-all border-2 border-[#ff0055] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {emailLoading ? (
                     <>
-                      <div className="w-5 h-5 border-2 border-black border-t-transparent animate-spin rounded-full" />
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent animate-spin rounded-full" />
                       Sending...
                     </>
                   ) : (
@@ -238,9 +224,38 @@ export function RecommendationsDisplay({
                 </div>
               )}
 
-              <p className="text-xs text-gray-500 text-center uppercase tracking-wide">
-                Come back later to capture your listening experience
-              </p>
+              {/* Coming Soon Features */}
+              <div className="bg-[#303030] border-2 border-white p-6 -mx-8 -mb-8 mt-6">
+                <h3 className="text-sm text-white uppercase tracking-wider mb-4 border-b-2 border-[#ff0055] pb-2 text-center">
+                  Coming Soon
+                </h3>
+                <ul className="space-y-3 text-sm text-gray-300">
+                  <li className="flex items-start gap-3">
+                    <span className="text-[#ff0055] font-bold">•</span>
+                    <span>Integration with Spotify (Playlist creation, listening history import)</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-[#ff0055] font-bold">•</span>
+                    <span>Advanced portrait</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-[#ff0055] font-bold">•</span>
+                    <span>Listening experience feedback and tracking</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-[#ff0055] font-bold">•</span>
+                    <span>Personalized music discovery insights</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-[#ff0055] font-bold">•</span>
+                    <span>Social login & forgotten password</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-[#ff0055] font-bold">•</span>
+                    <span>And more!</span>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
