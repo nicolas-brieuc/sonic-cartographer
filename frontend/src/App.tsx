@@ -52,6 +52,7 @@ export default function App() {
     direction: 'reinforced' | 'pivot';
     analysis: { reinforcedThemes?: string; strategicPivot?: string };
   } | null>(null);
+  const [loadingNewRecommendations, setLoadingNewRecommendations] = useState(false);
 
   // Load persisted data on mount
   useEffect(() => {
@@ -368,15 +369,46 @@ export default function App() {
     }
   };
 
-  const handleGetNewRecommendations = () => {
-    // Reset conversation and start a new one to get fresh recommendations
-    setCurrentStep('conversation');
-    setConversationHistory([
-      {
-        role: 'assistant',
-        content: 'Let\'s explore some new recommendations based on your musical portrait. What aspect of your gaps or unexplored territories interests you most right now?'
+  const handleGetNewRecommendations = async () => {
+    if (!conversationId) {
+      alert('No conversation found. Please start a new journey.');
+      return;
+    }
+
+    setLoadingNewRecommendations(true);
+
+    try {
+      // Generate new recommendations using the existing conversation
+      const response = await fetch(API_ENDPOINTS.generateRecommendations(conversationId), {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate new recommendations');
       }
-    ]);
+
+      // Map recommendations to frontend format
+      const newRecommendations: Recommendation[] = data.recommendations.map((rec: any) => ({
+        id: rec.albumId || rec.id,
+        title: rec.title,
+        artist: rec.artist,
+        year: rec.year,
+        reason: rec.reason,
+        spotifyLink: rec.spotifyLink,
+        coverImage: rec.coverImage,
+      }));
+
+      // Update recommendations
+      setRecommendations(newRecommendations);
+    } catch (error) {
+      console.error('Failed to get new recommendations:', error);
+      alert('Failed to get new recommendations. Please try again.');
+    } finally {
+      setLoadingNewRecommendations(false);
+    }
   };
 
   return (
@@ -446,6 +478,7 @@ export default function App() {
           onStartNew={handleStartNewSession}
           onStartNewRound={handleStartNewRound}
           onGetNewRecommendations={handleGetNewRecommendations}
+          loadingNewRecommendations={loadingNewRecommendations}
         />
       )}
       

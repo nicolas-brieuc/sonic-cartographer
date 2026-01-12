@@ -10,12 +10,14 @@ interface RecommendationsDisplayProps {
   onStartNew: () => void;
   onStartNewRound?: (direction: 'reinforced' | 'pivot', analysis: { reinforcedThemes?: string; strategicPivot?: string }) => void;
   onGetNewRecommendations?: () => void;
+  loadingNewRecommendations?: boolean;
 }
 
 export function RecommendationsDisplay({
   recommendations,
   onCaptureExperience,
-  onGetNewRecommendations
+  onGetNewRecommendations,
+  loadingNewRecommendations
 }: RecommendationsDisplayProps) {
   const [showListeningModal, setShowListeningModal] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
@@ -168,10 +170,20 @@ export function RecommendationsDisplay({
           {onGetNewRecommendations && (
             <button
               onClick={onGetNewRecommendations}
-              className="flex items-center justify-center gap-2 bg-white text-black px-12 py-4 uppercase tracking-wider hover:bg-[#ff0055] hover:text-white transition-all border-2 border-white"
+              disabled={loadingNewRecommendations}
+              className="flex items-center justify-center gap-2 bg-white text-black px-12 py-4 uppercase tracking-wider hover:bg-[#ff0055] hover:text-white transition-all border-2 border-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Get 5 New Recommendations
-              <RefreshCw className="w-5 h-5" />
+              {loadingNewRecommendations ? (
+                <>
+                  Generating...
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                </>
+              ) : (
+                <>
+                  Get 5 New Recommendations
+                  <RefreshCw className="w-5 h-5" />
+                </>
+              )}
             </button>
           )}
         </div>
