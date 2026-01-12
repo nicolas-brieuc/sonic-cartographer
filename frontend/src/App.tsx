@@ -411,6 +411,17 @@ export default function App() {
     }
   };
 
+  const handleRestartConversation = () => {
+    // Reset conversation state
+    setConversationId(null);
+    setConversationHistory([]);
+    setRecommendations([]);
+    setExplorationContext(null);
+
+    // Navigate back to portrait page
+    setCurrentStep('portrait');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       {/* User Menu - Always visible when logged in */}
@@ -479,6 +490,7 @@ export default function App() {
           onStartNewRound={handleStartNewRound}
           onGetNewRecommendations={handleGetNewRecommendations}
           loadingNewRecommendations={loadingNewRecommendations}
+          onRestartConversation={handleRestartConversation}
         />
       )}
       

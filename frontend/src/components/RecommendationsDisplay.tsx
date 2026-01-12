@@ -1,4 +1,4 @@
-import { ArrowRight, ExternalLink, CheckCircle2, History, Plus, RefreshCw, Music, Mail, X } from 'lucide-react';
+import { ArrowRight, ExternalLink, CheckCircle2, History, Plus, RefreshCw, Music, Mail, X, RotateCcw } from 'lucide-react';
 import { Recommendation } from '../App';
 import { useState } from 'react';
 import { API_ENDPOINTS, getAuthHeaders } from '../config/api';
@@ -11,13 +11,15 @@ interface RecommendationsDisplayProps {
   onStartNewRound?: (direction: 'reinforced' | 'pivot', analysis: { reinforcedThemes?: string; strategicPivot?: string }) => void;
   onGetNewRecommendations?: () => void;
   loadingNewRecommendations?: boolean;
+  onRestartConversation?: () => void;
 }
 
 export function RecommendationsDisplay({
   recommendations,
   onCaptureExperience,
   onGetNewRecommendations,
-  loadingNewRecommendations
+  loadingNewRecommendations,
+  onRestartConversation
 }: RecommendationsDisplayProps) {
   const [showListeningModal, setShowListeningModal] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
@@ -184,6 +186,16 @@ export function RecommendationsDisplay({
                   <RefreshCw className="w-5 h-5" />
                 </>
               )}
+            </button>
+          )}
+
+          {onRestartConversation && (
+            <button
+              onClick={onRestartConversation}
+              className="flex items-center justify-center gap-2 bg-[#202020] text-white px-12 py-4 uppercase tracking-wider hover:bg-white hover:text-black transition-all border-2 border-white"
+            >
+              Restart Exploratory Conversation
+              <RotateCcw className="w-5 h-5" />
             </button>
           )}
         </div>
